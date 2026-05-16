@@ -26,7 +26,7 @@ echo.
 start "" powershell -NoProfile -WindowStyle Hidden -Command "Start-Sleep -Seconds 2; Start-Process '%URL%'"
 
 cd /d "%ROOT%"
-node "%ROOT%server.js"
+node "%ROOT%local-server.js"
 
 echo.
 echo Servidor encerrado.

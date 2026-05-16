@@ -12,4 +12,4 @@ Write-Host "Servidor local: http://$hostName`:$port" -ForegroundColor Cyan
 Write-Host "Pressione Ctrl+C para encerrar." -ForegroundColor DarkGray
 Write-Host ""
 
-node .\server.js
+node .\local-server.js
