@@ -89,21 +89,21 @@ select {
 .brand-block {
   align-items: center;
   display: flex;
-  gap: 14px;
+  gap: 18px;
   min-width: 0;
 }
 
 .brand-logo {
   aspect-ratio: 1;
-  background: #ffffff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  box-shadow: none;
   flex: 0 0 auto;
-  height: 64px;
-  object-fit: contain;
-  padding: 8px;
-  width: 64px;
+  height: 82px;
+  object-fit: cover;
+  padding: 0;
+  width: 82px;
 }
 
 .header-actions {
@@ -195,6 +195,28 @@ body[data-theme="dark"] .tab.active {
   background: var(--surface);
   color: var(--ink);
   font-weight: 750;
+}
+
+.theme-button {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  height: 34px;
+  justify-content: center;
+  min-width: 66px;
+  padding: 0 12px;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.theme-button:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
 }
 
 .primary-button {
@@ -813,7 +835,7 @@ th {
   }
 
   .brand-logo {
-    height: 54px;
-    width: 54px;
+    height: 66px;
+    width: 66px;
   }
 }

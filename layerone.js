@@ -263,7 +263,7 @@ function applyTheme(theme) {
 
   const button = document.querySelector("#theme-toggle");
   if (button) {
-    button.textContent = theme === "dark" ? "Modo claro" : "Modo escuro";
+    button.textContent = theme === "dark" ? "Claro" : "Escuro";
     button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
   }
 }
@@ -718,13 +718,6 @@ document.querySelector("#consume-stock").addEventListener("click", () => {
   if (!filament) return;
 
   changeFilamentStock(filament.id, Number(data.grams), "use");
-});
-
-document.querySelector("#reset-demo").addEventListener("click", () => {
-  const previousIds = filaments.map((item) => item.id);
-  filaments = demoFilaments.map((item) => ({ ...item, id: crypto.randomUUID() }));
-  deleteFilamentsFromCloud(previousIds);
-  renderAll();
 });
 
 document.querySelector("#theme-toggle").addEventListener("click", () => {
