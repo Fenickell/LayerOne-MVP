@@ -7,6 +7,7 @@ const files = ["index.html", "layerone.js", "styles.css", "config.example.js"];
 
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });
+fs.cpSync(path.join(root, "assets"), path.join(dist, "assets"), { recursive: true });
 
 for (const file of files) {
   const source = path.join(root, file);
