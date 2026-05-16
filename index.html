@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>LayerOne Pricing MVP</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">LayerOne</p>
+        <h1>Gestão e Precificação 3D</h1>
+      </div>
+      <div class="header-actions">
+        <button class="ghost-button" id="theme-toggle" type="button">Modo escuro</button>
+        <button class="ghost-button" id="reset-demo" type="button">Restaurar demo</button>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Módulos">
+      <button class="tab active" data-tab="dashboard" type="button">Visão geral</button>
+      <button class="tab" data-tab="visual" type="button">Estoque</button>
+      <button class="tab" data-tab="insumos" type="button">Insumos</button>
+      <button class="tab" data-tab="calculadora" type="button">Calculadora</button>
+    </nav>
+
+    <main>
+      <section class="tab-panel active" id="dashboard">
+        <div class="metric-grid">
+          <article class="metric">
+            <span>Estoque total</span>
+            <strong id="metric-stock">0 kg</strong>
+          </article>
+          <article class="metric">
+            <span>Valor em estoque</span>
+            <strong id="metric-value">R$ 0,00</strong>
+          </article>
+          <article class="metric">
+            <span>Rolos críticos</span>
+            <strong id="metric-critical">0</strong>
+          </article>
+          <article class="metric">
+            <span>Custo médio/g</span>
+            <strong id="metric-avg">R$ 0,00</strong>
+          </article>
+        </div>
+
+        <section class="workspace two-columns">
+          <div>
+            <div class="section-title">
+              <h2>Alertas de estoque</h2>
+              <span>Reposição por prioridade</span>
+            </div>
+            <div class="alert-list" id="stock-alerts"></div>
+          </div>
+          <div>
+            <div class="section-title">
+              <h2>Movimentação rápida</h2>
+              <span>Entrada, uso ou retirada de rolo</span>
+            </div>
+            <form class="movement-form" id="movement-form">
+              <label>Filamento<select name="filamentId" id="movement-filament"></select></label>
+              <label>Quantidade (g)<input name="amount" min="0" step="0.1" type="number" value="50"></label>
+              <label>Custo total da entrada (R$)<input name="entryCost" min="0" step="0.01" type="number" placeholder="Ex.: 75 para um rolo de 1kg"></label>
+              <div class="action-row">
+                <button class="primary-button" name="action" value="add" type="submit">Chegou filamento</button>
+                <button class="secondary-button" name="action" value="use" type="submit">Usou filamento</button>
+                <button class="danger-button" name="action" value="remove" type="submit">Rolo acabou</button>
+              </div>
+            </form>
+            <button class="ghost-button wide-button" data-open-tab="insumos" type="button">Cadastrar novo rolo</button>
+            <div class="commercial-summary compact-summary">
+              <div><span>Chegou</span><strong>Cadastre um novo rolo ou reponha saldo de um rolo existente</strong></div>
+              <div><span>Usou</span><strong>Baixe as gramas gastas na impressão</strong></div>
+              <div><span>Acabou</span><strong>Remova o rolo do painel ativo</strong></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace">
+          <div>
+            <div class="section-title">
+              <h2>Resumo comercial</h2>
+              <span>Parâmetros usados na calculadora</span>
+            </div>
+            <div class="commercial-summary">
+              <div><span>Perfil B2C</span><strong>Margem maior, valor percebido e embalagem</strong></div>
+              <div><span>Perfil B2B</span><strong>Volume, margem menor e preço de revenda</strong></div>
+              <div><span>Método recomendado</span><strong>Custo real + hora-máquina + margem</strong></div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="tab-panel" id="visual">
+        <div class="section-title">
+          <h2>Rolos de filamento</h2>
+              <span>Medidor visual por rolo, fornecedor e saldo restante</span>
+        </div>
+        <div class="spool-grid" id="spool-grid"></div>
+      </section>
+
+      <section class="tab-panel" id="insumos">
+        <div class="workspace two-columns">
+          <form class="form-panel" id="filament-form">
+            <div class="section-title">
+              <h2>Cadastrar filamento</h2>
+              <span>Marca, fornecedor, material, cor e custo do rolo</span>
+            </div>
+            <div class="form-grid">
+              <label>Marca<input required name="brand" placeholder="Bambu Lab"></label>
+              <label>Fornecedor / Local de compra<input required name="supplier" placeholder="Shopee, Mercado Livre, Loja local"></label>
+              <label>Tipo<input required name="type" placeholder="PLA Matte"></label>
+              <label>Cor<input required name="colorName" placeholder="Preto"></label>
+              <label>Cor visual<input required name="colorHex" type="color" value="#202124"></label>
+              <label>Peso do rolo/lote (g)<input required min="1" name="initialWeight" type="number" value="1000"></label>
+              <label>Saldo atual (g)<input required min="0" name="currentWeight" type="number" value="1000"></label>
+              <label>Custo total pago no rolo (R$)<input required min="0" step="0.01" name="rollCost" type="number" value="95"></label>
+              <label>Alerta mínimo (g)<input required min="0" name="minAlert" type="number" value="200"></label>
+            </div>
+            <button class="primary-button" type="submit">Salvar filamento</button>
+          </form>
+
+          <div class="table-panel">
+            <div class="section-title">
+              <h2>Insumos cadastrados</h2>
+              <span>Custo automático por grama</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Filamento</th>
+                    <th>Fornecedor</th>
+                    <th>Saldo</th>
+                    <th>Custo médio</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="filament-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="calculadora">
+        <div class="calculator-layout">
+          <form class="form-panel" id="pricing-form">
+            <div class="section-title">
+              <h2>Planilha de cálculo</h2>
+              <span>Custo real de produção</span>
+            </div>
+            <div class="form-grid">
+              <label>Produto<input name="productName" value="Chaveiro articulado"></label>
+              <label>Filamento<select name="filamentId" id="filament-select"></select></label>
+              <label>Consumo (g)<input name="grams" min="0" step="0.1" type="number" value="38"></label>
+              <label>Tempo (h)<input name="hours" min="0" step="0.1" type="number" value="3.5"></label>
+              <label>kWh local (R$)<input name="kwhCost" min="0" step="0.01" type="number" value="0.95"></label>
+              <label>Consumo médio (kW)<input name="printerKw" min="0" step="0.01" type="number" value="0.12"></label>
+              <label>Valor Bambulab A1 (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500"></label>
+              <label>Vida util estimada (h)<input name="machineLife" min="1" step="1" type="number" value="3000"></label>
+              <label>Falhas/perdas (%)<input name="failureRate" min="0" step="0.1" type="number" value="8"></label>
+              <label>Embalagem (R$)<input name="packaging" min="0" step="0.01" type="number" value="1.2"></label>
+              <label>Acabamento/Mão de obra (R$)<input name="labor" min="0" step="0.01" type="number" value="4"></label>
+              <label>Impostos (%)<input name="taxRate" min="0" step="0.1" type="number" value="6"></label>
+              <label>Margem B2C (%)<input name="marginB2c" min="0" step="0.1" type="number" value="40"></label>
+              <label>Margem B2B (%)<input name="marginB2b" min="0" step="0.1" type="number" value="30"></label>
+              <label>Valor percebido (R$)<input name="perceivedValue" min="0" step="0.01" type="number" value="5"></label>
+            </div>
+          </form>
+
+          <aside class="result-panel">
+            <div class="section-title">
+              <h2>Precificação</h2>
+              <span>B2C e B2B lado a lado</span>
+            </div>
+            <div class="price-cards">
+              <article>
+                <span>Custo total</span>
+                <strong id="cost-total">R$ 0,00</strong>
+              </article>
+              <article>
+                <span>Preço B2C</span>
+                <strong id="price-b2c">R$ 0,00</strong>
+              </article>
+              <article>
+                <span>Preço B2B</span>
+                <strong id="price-b2b">R$ 0,00</strong>
+              </article>
+            </div>
+            <div class="breakdown" id="breakdown"></div>
+            <div class="cost-audit" id="cost-audit"></div>
+            <button class="primary-button" id="consume-stock" type="button">Registrar consumo no estoque</button>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
