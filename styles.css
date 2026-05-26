@@ -313,7 +313,8 @@ main {
 }
 
 .workspace,
-.calculator-layout {
+.calculator-layout,
+.smart-pricing-layout {
   display: grid;
   gap: 20px;
   margin-top: 20px;
@@ -325,6 +326,11 @@ main {
 
 .calculator-layout {
   grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+}
+
+.smart-pricing-layout {
+  align-items: start;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
 }
 
 .workspace > div,
@@ -367,6 +373,77 @@ main {
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-bottom: 16px;
+}
+
+.smart-block {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.smart-block:first-of-type {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.smart-block h3 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.segmented-control {
+  background: var(--row-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 14px;
+  padding: 6px;
+}
+
+.segmented-control label {
+  align-items: center;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  min-height: 38px;
+}
+
+.segmented-control label:has(input:checked) {
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  color: var(--accent-dark);
+  font-weight: 800;
+}
+
+.smart-result-panel {
+  position: sticky;
+  top: 18px;
+}
+
+.smart-price-cards article:first-child {
+  background: linear-gradient(135deg, var(--accent), #20b89a);
+}
+
+.smart-warning {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 8px;
+  color: var(--ink);
+  display: none;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+}
+
+.smart-warning:not(:empty) {
+  display: block;
 }
 
 label {
@@ -815,6 +892,7 @@ th {
   .metric-grid,
   .two-columns,
   .calculator-layout,
+  .smart-pricing-layout,
   .form-grid,
   .action-row,
   .quick-card-actions,

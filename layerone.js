@@ -2,6 +2,7 @@ const STORAGE_KEY = "layerone-mvp-filaments";
 const THEME_KEY = "layerone-mvp-theme";
 const SUPABASE_TABLE = "layerone_filaments";
 const CONFIG_PLACEHOLDER = "COLE_SUA_URL_AQUI";
+const MARKETPLACE_PRESETS = window.LayerOnePricingEngine?.MARKETPLACE_PRESETS || {};
 
 const demoFilaments = [
   {
@@ -507,6 +508,32 @@ function renderFilamentOptions() {
   if (filaments.some((item) => item.id === movementSelected)) {
     movementSelect.value = movementSelected;
   }
+
+  const smartSelect = document.querySelector("#smart-filament-select");
+  if (smartSelect) {
+    const smartSelected = smartSelect.value;
+    smartSelect.innerHTML = filaments
+      .map((item) => `<option value="${item.id}">${getFilamentLabel(item)}</option>`)
+      .join("");
+
+    if (filaments.some((item) => item.id === smartSelected)) {
+      smartSelect.value = smartSelected;
+    }
+  }
+}
+
+function renderMarketplaceOptions() {
+  const select = document.querySelector("#smart-marketplace");
+  if (!select) return;
+
+  const selected = select.value || "shopee";
+  select.innerHTML = Object.values(MARKETPLACE_PRESETS)
+    .map((marketplace) => `<option value="${marketplace.id}">${marketplace.name}</option>`)
+    .join("");
+
+  if (MARKETPLACE_PRESETS[selected]) {
+    select.value = selected;
+  }
 }
 
 function readPricingForm() {
@@ -563,13 +590,99 @@ function calculatePricing() {
   document.querySelector("#price-b2b").closest("article").querySelector("span").textContent = `Preço B2B com ${data.marginB2b}%`;
 }
 
+function readSmartPricingForm() {
+  const form = document.querySelector("#smart-pricing-form");
+  if (!form) return null;
+
+  const data = Object.fromEntries(new FormData(form).entries());
+  for (const key of Object.keys(data)) {
+    if (!["productName", "filamentId", "marketplace", "mode"].includes(key)) {
+      data[key] = Number(data[key] || 0);
+    }
+  }
+
+  return data;
+}
+
+function calculateSmartPricing() {
+  const engine = window.LayerOnePricingEngine;
+  const data = readSmartPricingForm();
+  if (!engine || !data) return;
+
+  const filament = filaments.find((item) => item.id === data.filamentId) || filaments[0];
+  const marketplace = MARKETPLACE_PRESETS[data.marketplace] || MARKETPLACE_PRESETS.lojaPropria;
+  const costPerGram = filament ? getCostPerGram(filament) : 0;
+  const result = engine.calculateAdvancedPricing({
+    production: {
+      mode: data.mode,
+      physicalUnits: data.mode === "plate" ? data.physicalUnits : 1,
+      unitsPerOffer: data.unitsPerOffer,
+      totalWeightGrams: data.totalWeightGrams,
+      totalTimeWholeHours: data.totalTimeWholeHours,
+      totalTimeMinutes: data.totalTimeMinutes,
+      filamentCostPerGram: costPerGram,
+      kwhCost: data.kwhCost,
+      printerKw: data.printerKw,
+      machineCost: data.machineCost,
+      machineLifeHours: data.machineLifeHours,
+      failureRatePercent: data.failureRatePercent,
+      packagingCostPerOffer: data.packagingCostPerOffer,
+      laborCostPerOffer: data.laborCostPerOffer,
+      extraCostPerOffer: data.extraCostPerOffer,
+      batchExtraCost: data.batchExtraCost
+    },
+    marketplace,
+    targetNetMarginPercent: data.targetNetMarginPercent,
+    taxPercent: 0
+  });
+
+  const suggested = result.suggested;
+  const breakEven = result.breakEven;
+  document.querySelector("#smart-suggested-price").textContent = suggested ? currency.format(suggested.salePrice) : "InviÃ¡vel";
+  document.querySelector("#smart-net-profit").textContent = suggested ? currency.format(suggested.netProfit) : currency.format(0);
+  document.querySelector("#smart-break-even").textContent = breakEven ? currency.format(breakEven.salePrice) : "InviÃ¡vel";
+  document.querySelector("#smart-summary-label").textContent = `${marketplace.name} com margem lÃ­quida de ${data.targetNetMarginPercent}%`;
+
+  const warning = document.querySelector("#smart-warning");
+  const commercialOffers = result.production.commercialOffers;
+  const hasKit = Number(data.unitsPerOffer) > 1;
+  warning.innerHTML = "";
+  if (data.mode === "unit" && Number(data.physicalUnits) > 1) {
+    warning.innerHTML = "Modo unitÃ¡rio usa 1 peÃ§a por cÃ¡lculo. Para dividir custo entre vÃ¡rias peÃ§as, selecione Plate / lote.";
+  } else if (hasKit) {
+    warning.innerHTML = `Kit detectado: ${data.unitsPerOffer} peÃ§as fÃ­sicas formam 1 oferta vendida. A taxa fixa do marketplace entra por oferta, nÃ£o por peÃ§a fÃ­sica.`;
+  } else if (data.mode === "plate" && Number(data.physicalUnits) <= 1) {
+    warning.innerHTML = "Plate com apenas 1 peÃ§a nÃ£o gera rateio. Confira se este cÃ¡lculo deveria ser unitÃ¡rio.";
+  }
+
+  document.querySelector("#smart-breakdown").innerHTML = `
+    <div><span>Custo real por oferta</span><strong>${currency.format(result.production.finalCostPerOffer)}</strong></div>
+    <div><span>Custo de produÃ§Ã£o por oferta</span><strong>${currency.format(result.production.productionCostPerOffer)}</strong></div>
+    <div><span>Taxas do marketplace</span><strong>${suggested ? currency.format(suggested.marketplaceFee.totalFee) : currency.format(0)}</strong></div>
+    <div><span>Regra aplicada</span><strong>${suggested?.marketplaceFee.ruleLabel || "Sem regra"}</strong></div>
+    <div><span>Margem lÃ­quida real</span><strong>${suggested ? `${suggested.netMarginPercent.toFixed(2)}%` : "0%"}</strong></div>
+  `;
+
+  document.querySelector("#smart-audit").innerHTML = `
+    <div><span>PeÃ§as fÃ­sicas</span><strong>${grams.format(result.production.physicalUnits)}</strong></div>
+    <div><span>Ofertas comerciais</span><strong>${grams.format(commercialOffers)}</strong></div>
+    <div><span>Peso por peÃ§a</span><strong>${grams.format(result.production.unitWeightGrams)}g</strong></div>
+    <div><span>Tempo mÃ©dio por oferta</span><strong>${result.production.averageTimeHoursPerOffer.toFixed(2)}h</strong></div>
+    <div><span>Material total</span><strong>${currency.format(result.production.materialCost)}</strong></div>
+    <div><span>Energia + depreciaÃ§Ã£o</span><strong>${currency.format(result.production.energyCost + result.production.depreciationCost)}</strong></div>
+    <div><span>Embalagem + mÃ£o de obra</span><strong>${currency.format(result.production.packagingCostPerOffer + result.production.laborCostPerOffer)}</strong></div>
+  `;
+}
+
 function renderAll() {
   saveFilaments();
   renderDashboard();
   renderSpools();
   renderTable();
   renderFilamentOptions();
+  renderMarketplaceOptions();
   calculatePricing();
+  calculateSmartPricing();
 }
 
 document.querySelectorAll(".tab").forEach((tab) => {
@@ -711,6 +824,8 @@ document.querySelector("#spool-grid").addEventListener("click", (event) => {
 });
 
 document.querySelector("#pricing-form").addEventListener("input", calculatePricing);
+
+document.querySelector("#smart-pricing-form")?.addEventListener("input", calculateSmartPricing);
 
 document.querySelector("#consume-stock").addEventListener("click", () => {
   const data = readPricingForm();

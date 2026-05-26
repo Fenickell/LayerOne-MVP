@@ -26,6 +26,7 @@
       <button class="tab" data-tab="visual" type="button">Estoque</button>
       <button class="tab" data-tab="insumos" type="button">Insumos</button>
       <button class="tab" data-tab="calculadora" type="button">Calculadora</button>
+      <button class="tab" data-tab="inteligente" type="button">PrecificaÃ§Ã£o inteligente</button>
     </nav>
 
     <main>
@@ -197,6 +198,81 @@
             <div class="breakdown" id="breakdown"></div>
             <div class="cost-audit" id="cost-audit"></div>
             <button class="primary-button" id="consume-stock" type="button">Registrar consumo no estoque</button>
+          </aside>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="inteligente">
+        <div class="smart-pricing-layout">
+          <form class="form-panel" id="smart-pricing-form">
+            <div class="section-title">
+              <h2>PrecificaÃ§Ã£o inteligente</h2>
+              <span>Marketplace, plate, kit e margem lÃ­quida</span>
+            </div>
+
+            <div class="smart-block">
+              <h3>Produto e marketplace</h3>
+              <div class="form-grid">
+                <label>Produto<input name="productName" value="Chaveiro articulado"></label>
+                <label>Filamento<select name="filamentId" id="smart-filament-select"></select></label>
+                <label>Marketplace<select name="marketplace" id="smart-marketplace"></select></label>
+                <label>Margem lÃ­quida desejada (%)<input name="targetNetMarginPercent" min="0" max="80" step="0.1" type="number" value="35"></label>
+              </div>
+            </div>
+
+            <div class="smart-block">
+              <h3>Modo de produÃ§Ã£o</h3>
+              <div class="segmented-control" role="group" aria-label="Modo de produÃ§Ã£o">
+                <label><input checked name="mode" type="radio" value="unit"> UnitÃ¡rio</label>
+                <label><input name="mode" type="radio" value="plate"> Plate / lote</label>
+              </div>
+              <div class="form-grid">
+                <label>PeÃ§as fÃ­sicas na impressÃ£o<input name="physicalUnits" min="1" step="1" type="number" value="1"></label>
+                <label>PeÃ§as por kit/oferta<input name="unitsPerOffer" min="1" step="1" type="number" value="1"></label>
+                <label>Peso total da impressÃ£o (g)<input name="totalWeightGrams" min="0" step="0.1" type="number" value="8"></label>
+                <label>Tempo total - horas<input name="totalTimeWholeHours" min="0" step="1" type="number" value="0"></label>
+                <label>Tempo total - minutos<input name="totalTimeMinutes" min="0" max="59" step="1" type="number" value="40"></label>
+                <label>Falhas/perdas (%)<input name="failureRatePercent" min="0" step="0.1" type="number" value="8"></label>
+              </div>
+            </div>
+
+            <div class="smart-block">
+              <h3>Custos por oferta vendida</h3>
+              <div class="form-grid">
+                <label>Embalagem por oferta (R$)<input name="packagingCostPerOffer" min="0" step="0.01" type="number" value="1.20"></label>
+                <label>MÃ£o de obra por oferta (R$)<input name="laborCostPerOffer" min="0" step="0.01" type="number" value="1.00"></label>
+                <label>Extras por oferta (R$)<input name="extraCostPerOffer" min="0" step="0.01" type="number" value="0"></label>
+                <label>Custos extras do lote (R$)<input name="batchExtraCost" min="0" step="0.01" type="number" value="0"></label>
+                <label>kWh local (R$)<input name="kwhCost" min="0" step="0.01" type="number" value="0.95"></label>
+                <label>Consumo mÃ©dio (kW)<input name="printerKw" min="0" step="0.01" type="number" value="0.12"></label>
+                <label>Valor Bambulab A1 (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500"></label>
+                <label>Vida Ãºtil estimada (h)<input name="machineLifeHours" min="1" step="1" type="number" value="3000"></label>
+              </div>
+            </div>
+          </form>
+
+          <aside class="result-panel smart-result-panel">
+            <div class="section-title">
+              <h2>Resultado</h2>
+              <span id="smart-summary-label">PreÃ§o sustentÃ¡vel</span>
+            </div>
+            <div class="price-cards smart-price-cards">
+              <article>
+                <span>PreÃ§o sugerido</span>
+                <strong id="smart-suggested-price">R$ 0,00</strong>
+              </article>
+              <article>
+                <span>Lucro lÃ­quido</span>
+                <strong id="smart-net-profit">R$ 0,00</strong>
+              </article>
+              <article>
+                <span>Break-even</span>
+                <strong id="smart-break-even">R$ 0,00</strong>
+              </article>
+            </div>
+            <div class="smart-warning" id="smart-warning"></div>
+            <div class="breakdown" id="smart-breakdown"></div>
+            <div class="cost-audit" id="smart-audit"></div>
           </aside>
         </div>
       </section>
