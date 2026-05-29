@@ -491,9 +491,12 @@ function renderTable() {
 
 function renderFilamentOptions() {
   const selected = document.querySelector("#filament-select").value;
-  document.querySelector("#filament-select").innerHTML = filaments
-    .map((item) => `<option value="${item.id}">${getFilamentLabel(item)}</option>`)
-    .join("");
+  const emptyOption = "<option value=\"\" disabled selected>Cadastre um filamento primeiro</option>";
+  const optionHtml = filaments.length
+    ? filaments.map((item) => `<option value="${item.id}">${getFilamentLabel(item)}</option>`).join("")
+    : emptyOption;
+
+  document.querySelector("#filament-select").innerHTML = optionHtml;
 
   if (filaments.some((item) => item.id === selected)) {
     document.querySelector("#filament-select").value = selected;
@@ -501,9 +504,7 @@ function renderFilamentOptions() {
 
   const movementSelect = document.querySelector("#movement-filament");
   const movementSelected = movementSelect.value;
-  movementSelect.innerHTML = filaments
-    .map((item) => `<option value="${item.id}">${getFilamentLabel(item)}</option>`)
-    .join("");
+  movementSelect.innerHTML = optionHtml;
 
   if (filaments.some((item) => item.id === movementSelected)) {
     movementSelect.value = movementSelected;
@@ -512,9 +513,7 @@ function renderFilamentOptions() {
   const smartSelect = document.querySelector("#smart-filament-select");
   if (smartSelect) {
     const smartSelected = smartSelect.value;
-    smartSelect.innerHTML = filaments
-      .map((item) => `<option value="${item.id}">${getFilamentLabel(item)}</option>`)
-      .join("");
+    smartSelect.innerHTML = optionHtml;
 
     if (filaments.some((item) => item.id === smartSelected)) {
       smartSelect.value = smartSelected;
@@ -742,6 +741,17 @@ function calculateSmartPricing() {
 
   const filament = filaments.find((item) => item.id === data.filamentId) || filaments[0];
   const marketplace = MARKETPLACE_PRESETS[data.marketplace] || MARKETPLACE_PRESETS.lojaPropria;
+  if (!filament) {
+    document.querySelector("#smart-suggested-price").textContent = "R$ 0,00";
+    document.querySelector("#smart-net-profit").textContent = "R$ 0,00";
+    document.querySelector("#smart-break-even").textContent = "R$ 0,00";
+    document.querySelector("#smart-summary-label").textContent = "Cadastre um filamento para calcular";
+    document.querySelector("#smart-warning").innerHTML = "O primeiro passo é cadastrar pelo menos um filamento. Depois disso, a precificação consegue puxar o custo médio por grama automaticamente.";
+    document.querySelector("#smart-breakdown").innerHTML = "";
+    document.querySelector("#smart-audit").innerHTML = "";
+    normalizeVisibleText();
+    return;
+  }
   const costPerGram = filament ? getCostPerGram(filament) : 0;
   const result = engine.calculateAdvancedPricing({
     production: {
