@@ -536,6 +536,137 @@ function renderMarketplaceOptions() {
   }
 }
 
+function normalizeVisibleText() {
+  document.querySelector('[data-tab="dashboard"]') && (document.querySelector('[data-tab="dashboard"]').textContent = "Início");
+  document.querySelector('[data-tab="calculadora"]') && (document.querySelector('[data-tab="calculadora"]').textContent = "Cálculo simples");
+  document.querySelector('[data-tab="inteligente"]') && (document.querySelector('[data-tab="inteligente"]').textContent = "Preço inteligente");
+
+  const replacements = [
+    ["GestÃ£o", "Gestão"],
+    ["PrecificaÃƒÂ§ÃƒÂ£o", "Precificação"],
+    ["PrecificaÃ§Ã£o", "Precificação"],
+    ["MÃƒÂ©dio", "Médio"],
+    ["mÃ©dio", "médio"],
+    ["mÃƒÂ©dio", "médio"],
+    ["mÃ©dia", "média"],
+    ["ReposiÃ§Ã£o", "Reposição"],
+    ["MovimentaÃ§Ã£o", "Movimentação"],
+    ["rÃ¡pida", "rápida"],
+    ["impressÃ£o", "impressão"],
+    ["ParÃ¢metros", "Parâmetros"],
+    ["MÃ©todo", "Método"],
+    ["mÃ¡quina", "máquina"],
+    ["preÃ§o", "preço"],
+    ["PreÃ§o", "Preço"],
+    ["produÃ§Ã£o", "produção"],
+    ["ProduÃ§Ã£o", "Produção"],
+    ["mÃ£o", "mão"],
+    ["MÃ£o", "Mão"],
+    ["DepreciaÃ§Ã£o", "Depreciação"],
+    ["cÃ¡lculo", "cálculo"],
+    ["CÃ¡lculo", "Cálculo"],
+    ["automÃ¡tico", "automático"],
+    ["mÃ­nimo", "mínimo"],
+    ["Ãºtil", "útil"],
+    ["Ã¡", "á"],
+    ["Ã©", "é"],
+    ["Ã­", "í"],
+    ["Ã³", "ó"],
+    ["Ãº", "ú"],
+    ["Ã£", "ã"],
+    ["Ã§", "ç"],
+    ["ÃƒÂ¡", "á"],
+    ["ÃƒÂ©", "é"],
+    ["ÃƒÂ­", "í"],
+    ["ÃƒÂ³", "ó"],
+    ["ÃƒÂº", "ú"],
+    ["ÃƒÂ£", "ã"],
+    ["ÃƒÂ§", "ç"],
+    ["ÃƒÂ¡", "á"],
+    ["ÃƒÂ­", "í"],
+    ["ÃƒÂ£", "ã"]
+  ];
+
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+
+  nodes.forEach((node) => {
+    let text = node.nodeValue;
+    replacements.forEach(([bad, good]) => {
+      text = text.replaceAll(bad, good);
+    });
+    node.nodeValue = text;
+  });
+}
+
+function renderSmartPricingShell() {
+  const form = document.querySelector("#smart-pricing-form");
+  if (!form) return;
+
+  form.innerHTML = `
+    <div class="section-title">
+      <h2>Precificação inteligente</h2>
+      <span>Venda com margem líquida, marketplace e produção em lote</span>
+    </div>
+
+    <ol class="smart-flow" aria-label="Etapas da precificação">
+      <li class="active"><strong>1</strong><span>Produto</span></li>
+      <li><strong>2</strong><span>Produção</span></li>
+      <li><strong>3</strong><span>Venda</span></li>
+      <li><strong>4</strong><span>Resultado</span></li>
+    </ol>
+
+    <div class="smart-block">
+      <div class="smart-block-title">
+        <h3>O que será vendido?</h3>
+        <p>Defina o produto, o filamento e se a oferta é uma peça individual ou um kit.</p>
+      </div>
+      <div class="form-grid">
+        <label>Produto<input name="productName" value="Chaveiro articulado"></label>
+        <label>Filamento<select name="filamentId" id="smart-filament-select"></select></label>
+        <label>Marketplace<select name="marketplace" id="smart-marketplace"></select></label>
+        <label>Margem líquida desejada (%)<input name="targetNetMarginPercent" min="0" max="80" step="0.1" type="number" value="35"></label>
+      </div>
+    </div>
+
+    <div class="smart-block">
+      <div class="smart-block-title">
+        <h3>Como será produzido?</h3>
+        <p>Use unitário para uma peça sozinha ou plate quando várias peças saem na mesma impressão.</p>
+      </div>
+      <div class="mode-card-grid" role="radiogroup" aria-label="Modo de produção">
+        <label class="mode-card"><input checked name="mode" type="radio" value="unit"><strong>Unitário</strong><span>1 peça impressa sozinha</span></label>
+        <label class="mode-card"><input name="mode" type="radio" value="plate"><strong>Plate / lote</strong><span>várias peças na mesma impressão</span></label>
+      </div>
+      <div class="form-grid">
+        <label>Peças na impressão<input name="physicalUnits" min="1" step="1" type="number" value="1"></label>
+        <label>Peças por kit/oferta<input name="unitsPerOffer" min="1" step="1" type="number" value="1"></label>
+        <label>Peso total da impressão (g)<input name="totalWeightGrams" min="0" step="0.1" type="number" value="8"></label>
+        <label>Falhas/perdas (%)<input name="failureRatePercent" min="0" step="0.1" type="number" value="8"></label>
+      </div>
+      <div class="time-grid">
+        <label>Tempo total - horas<input name="totalTimeWholeHours" min="0" step="1" type="number" value="0"></label>
+        <label>Tempo total - minutos<input name="totalTimeMinutes" min="0" max="59" step="1" type="number" value="40"></label>
+      </div>
+    </div>
+
+    <details class="smart-advanced">
+      <summary>Custos e parâmetros avançados</summary>
+      <div class="form-grid">
+        <label>Embalagem por oferta (R$)<input name="packagingCostPerOffer" min="0" step="0.01" type="number" value="1.20"></label>
+        <label>Mão de obra por oferta (R$)<input name="laborCostPerOffer" min="0" step="0.01" type="number" value="1.00"></label>
+        <label>Extras por oferta (R$)<input name="extraCostPerOffer" min="0" step="0.01" type="number" value="0"></label>
+        <label>Custos extras do lote (R$)<input name="batchExtraCost" min="0" step="0.01" type="number" value="0"></label>
+        <label>kWh local (R$)<input name="kwhCost" min="0" step="0.01" type="number" value="0.95"></label>
+        <label>Consumo médio (kW)<input name="printerKw" min="0" step="0.01" type="number" value="0.12"></label>
+        <label>Valor Bambulab A1 (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500"></label>
+        <label>Vida útil estimada (h)<input name="machineLifeHours" min="1" step="1" type="number" value="3000"></label>
+      </div>
+    </details>
+  `;
+}
+
 function readPricingForm() {
   const form = new FormData(document.querySelector("#pricing-form"));
   const data = Object.fromEntries(form.entries());
@@ -672,9 +803,11 @@ function calculateSmartPricing() {
     <div><span>Energia + depreciaÃ§Ã£o</span><strong>${currency.format(result.production.energyCost + result.production.depreciationCost)}</strong></div>
     <div><span>Embalagem + mÃ£o de obra</span><strong>${currency.format(result.production.packagingCostPerOffer + result.production.laborCostPerOffer)}</strong></div>
   `;
+  normalizeVisibleText();
 }
 
 function renderAll() {
+  normalizeVisibleText();
   saveFilaments();
   renderDashboard();
   renderSpools();
@@ -826,6 +959,7 @@ document.querySelector("#spool-grid").addEventListener("click", (event) => {
 document.querySelector("#pricing-form").addEventListener("input", calculatePricing);
 
 document.querySelector("#smart-pricing-form")?.addEventListener("input", calculateSmartPricing);
+document.querySelector("#smart-pricing-form")?.addEventListener("change", calculateSmartPricing);
 
 document.querySelector("#consume-stock").addEventListener("click", () => {
   const data = readPricingForm();
@@ -839,6 +973,8 @@ document.querySelector("#theme-toggle").addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
 
+renderSmartPricingShell();
+normalizeVisibleText();
 applyTheme(currentTheme);
 renderAll();
 initializeCloudStorage();
