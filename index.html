@@ -9,6 +9,24 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <section class="auth-screen" id="auth-screen" hidden>
+      <div class="auth-card">
+        <img class="auth-logo" src="assets/logo-layerone.jfif" alt="LayerOne">
+        <div>
+          <span class="eyebrow">Acesso seguro</span>
+          <h1>Entre para acessar sua gestão 3D</h1>
+          <p>Seu estoque, custos e precificações ficam vinculados ao usuário autenticado.</p>
+        </div>
+        <form class="auth-form" id="login-form">
+          <label>E-mail<input autocomplete="email" name="email" required type="email" placeholder="seu@email.com"></label>
+          <label>Senha<input autocomplete="current-password" name="password" required type="password" placeholder="Sua senha"></label>
+          <button class="primary-button" type="submit">Entrar</button>
+          <p class="auth-message" id="auth-message" role="status"></p>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell" id="app-shell" hidden>
     <header class="app-header">
       <div class="brand-block">
         <img class="brand-logo" src="assets/logo-layerone.jfif" alt="LayerOne">
@@ -17,6 +35,8 @@
         </div>
       </div>
       <div class="header-actions">
+        <span class="user-pill" id="user-email" hidden></span>
+        <button class="ghost-button header-logout" id="logout-button" type="button" hidden>Sair</button>
         <button class="theme-button" id="theme-toggle" type="button" aria-label="Alternar tema" title="Alternar tema">Escuro</button>
       </div>
     </header>
@@ -294,5 +314,6 @@
     <script src="config.js"></script>
     <script src="pricing-engine.js"></script>
     <script src="layerone.js"></script>
+    </div>
   </body>
 </html>

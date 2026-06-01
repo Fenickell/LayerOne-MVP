@@ -65,9 +65,12 @@ const demoFilaments = [
 
 let filaments = loadFilaments();
 let currentTheme = loadTheme();
+let appConfig = null;
+let currentUser = null;
 let supabaseClient = null;
 let isCloudReady = false;
 let isHydratingCloud = false;
+let isUserScopedStorage = false;
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -78,15 +81,15 @@ const grams = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 1
 });
 
-function loadFilaments() {
+function loadFilaments(useDemoFallback = true) {
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (!stored) return demoFilaments;
+  if (!stored) return useDemoFallback ? demoFilaments : [];
 
   try {
     const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) && parsed.length ? normalizeFilaments(parsed) : demoFilaments;
+    return Array.isArray(parsed) ? normalizeFilaments(parsed) : useDemoFallback ? demoFilaments : [];
   } catch {
-    return demoFilaments;
+    return useDemoFallback ? demoFilaments : [];
   }
 }
 
@@ -110,7 +113,7 @@ function normalizeFilaments(items) {
 
 function saveFilaments() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(filaments));
-  syncFilamentsToCloud();
+  if (currentUser) syncFilamentsToCloud();
 }
 
 function isConfigReady(config) {
@@ -141,6 +144,7 @@ async function loadAppConfig() {
 function toDatabaseRow(item) {
   return {
     id: item.id,
+    ...(isUserScopedStorage ? { user_id: currentUser?.id || null } : {}),
     brand: item.brand,
     supplier: item.supplier || "",
     type: item.type,
@@ -173,12 +177,42 @@ function fromDatabaseRow(row) {
   };
 }
 
-async function initializeCloudStorage() {
-  const config = await loadAppConfig();
-  if (!isConfigReady(config) || !window.supabase?.createClient) return;
+function setAuthMessage(message, type = "") {
+  const element = document.querySelector("#auth-message");
+  if (!element) return;
 
-  supabaseClient = window.supabase.createClient(config.supabaseUrl, config.supabaseKey);
-  isCloudReady = true;
+  element.textContent = message;
+  element.classList.remove("error", "success");
+  if (type) element.classList.add(type);
+}
+
+function showAuthScreen() {
+  document.querySelector("#auth-screen").hidden = false;
+  document.querySelector("#app-shell").hidden = true;
+}
+
+function showAppShell() {
+  document.querySelector("#auth-screen").hidden = true;
+  document.querySelector("#app-shell").hidden = false;
+}
+
+function renderUserState() {
+  const userEmail = document.querySelector("#user-email");
+  const logoutButton = document.querySelector("#logout-button");
+  const shouldShow = Boolean(currentUser);
+
+  if (userEmail) {
+    userEmail.hidden = !shouldShow;
+    userEmail.textContent = currentUser?.email || "";
+  }
+
+  if (logoutButton) {
+    logoutButton.hidden = !shouldShow;
+  }
+}
+
+async function hydrateCloudFilaments() {
+  if (!isCloudReady || !supabaseClient || !currentUser) return;
 
   try {
     isHydratingCloud = true;
@@ -189,22 +223,78 @@ async function initializeCloudStorage() {
 
     if (error) throw error;
 
-    if (Array.isArray(data) && data.length) {
-      filaments = normalizeFilaments(data.map(fromDatabaseRow));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(filaments));
-      renderAll();
-    } else {
-      await syncFilamentsToCloud();
-    }
+    filaments = Array.isArray(data) ? normalizeFilaments(data.map(fromDatabaseRow)) : [];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filaments));
+    renderAll();
   } catch (error) {
     console.warn("Supabase indisponivel. Mantendo dados locais.", error);
+    filaments = loadFilaments(false);
+    renderAll();
   } finally {
     isHydratingCloud = false;
   }
 }
 
+async function detectUserScopedStorage() {
+  if (!isCloudReady || !supabaseClient) return;
+
+  const { error } = await supabaseClient
+    .from(SUPABASE_TABLE)
+    .select("user_id")
+    .limit(1);
+
+  isUserScopedStorage = !error;
+}
+
+async function handleAuthSession(session) {
+  currentUser = session?.user || null;
+  renderUserState();
+
+  if (!currentUser) {
+    filaments = [];
+    showAuthScreen();
+    setAuthMessage("", "");
+    return;
+  }
+
+  showAppShell();
+  setAuthMessage("Login realizado.", "success");
+  await detectUserScopedStorage();
+  await hydrateCloudFilaments();
+}
+
+async function initializeCloudStorage() {
+  appConfig = await loadAppConfig();
+
+  if (!isConfigReady(appConfig) || !window.supabase?.createClient) {
+    isCloudReady = false;
+    filaments = loadFilaments(true);
+    showAppShell();
+    renderUserState();
+    renderAll();
+    return;
+  }
+
+  supabaseClient = window.supabase.createClient(appConfig.supabaseUrl, appConfig.supabaseKey);
+  isCloudReady = true;
+
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (error) {
+    console.warn("Nao foi possivel ler a sessao Supabase.", error);
+    showAuthScreen();
+    setAuthMessage("Não foi possível validar sua sessão. Tente entrar novamente.", "error");
+    return;
+  }
+
+  await handleAuthSession(data.session);
+
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    handleAuthSession(session);
+  });
+}
+
 async function syncFilamentsToCloud() {
-  if (!isCloudReady || isHydratingCloud || !supabaseClient) return;
+  if (!isCloudReady || isHydratingCloud || !supabaseClient || !currentUser) return;
 
   try {
     const rows = filaments.map(toDatabaseRow);
@@ -221,7 +311,7 @@ async function syncFilamentsToCloud() {
 }
 
 async function deleteFilamentFromCloud(filamentId) {
-  if (!isCloudReady || !supabaseClient || !filamentId) return;
+  if (!isCloudReady || !supabaseClient || !currentUser || !filamentId) return;
 
   try {
     const { error } = await supabaseClient
@@ -236,7 +326,7 @@ async function deleteFilamentFromCloud(filamentId) {
 }
 
 async function deleteFilamentsFromCloud(filamentIds) {
-  if (!isCloudReady || !supabaseClient || !filamentIds.length) return;
+  if (!isCloudReady || !supabaseClient || !currentUser || !filamentIds.length) return;
 
   try {
     const { error } = await supabaseClient
@@ -307,6 +397,20 @@ function formatStock(weightInGrams) {
   }
 
   return `${grams.format(value)}g`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function safeHexColor(value) {
+  const color = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(color) ? color : "#22c55e";
 }
 
 function getStatus(filament) {
@@ -399,13 +503,17 @@ function renderDashboard() {
     .sort((a, b) => getRemainingPercent(a) - getRemainingPercent(b))
     .map((item) => {
       const status = getStatus(item);
+      const colorHex = safeHexColor(item.colorHex);
+      const id = escapeHtml(item.id);
+      const title = escapeHtml(`${item.type} ${item.colorName}`);
+      const source = escapeHtml(`${item.brand} - ${item.supplier || "Fornecedor não informado"}`);
       return `
-        <div class="swipe-row" data-swipe-id="${item.id}">
-          <button class="swipe-delete" data-alert-delete="${item.id}" type="button">Excluir</button>
+        <div class="swipe-row" data-swipe-id="${id}">
+          <button class="swipe-delete" data-alert-delete="${id}" type="button">Excluir</button>
           <div class="alert-item swipe-content">
             <div>
-              <strong><span class="swatch" style="background:${item.colorHex}"></span>${item.type} ${item.colorName}</strong>
-              <p>${item.brand} - ${item.supplier || "Fornecedor não informado"} - ${formatStock(item.currentWeight)} restantes</p>
+              <strong><span class="swatch" style="background:${colorHex}"></span>${title}</strong>
+              <p>${source} - ${formatStock(item.currentWeight)} restantes</p>
             </div>
             <span class="status ${status.className}">${status.label}</span>
           </div>
@@ -424,17 +532,22 @@ function renderSpools() {
       const usedRatio = Math.max(0, Math.min(1, (100 - percent) / 100));
       const status = getStatus(item);
       const currentValue = Number(item.currentWeight) * getCostPerGram(item);
+      const colorHex = safeHexColor(item.colorHex);
+      const id = escapeHtml(item.id);
+      const title = escapeHtml(`${item.type} ${item.colorName}`);
+      const brand = escapeHtml(item.brand);
+      const supplier = escapeHtml(item.supplier || "Fornecedor não informado");
 
       return `
         <article class="spool-card">
           <header>
             <div>
-              <h3>${item.type} ${item.colorName}</h3>
-              <p>${item.brand} - ${item.supplier || "Fornecedor não informado"}</p>
+              <h3>${title}</h3>
+              <p>${brand} - ${supplier}</p>
             </div>
             <span class="status ${status.className}">${status.label}</span>
           </header>
-          <div class="stock-meter vertical-meter" style="--filament-color:${item.colorHex}; --stock-percent:${percent.toFixed(0)}%; --used-ratio:${usedRatio.toFixed(2)}" aria-label="${percent.toFixed(0)}% restante">
+          <div class="stock-meter vertical-meter" style="--filament-color:${colorHex}; --stock-percent:${percent.toFixed(0)}%; --used-ratio:${usedRatio.toFixed(2)}" aria-label="${percent.toFixed(0)}% restante">
             <div class="vertical-spool">
               <span class="spool-side left"></span>
               <span class="spool-side right"></span>
@@ -446,11 +559,11 @@ function renderSpools() {
           </div>
           <div class="spool-stats">
             <div><span>Saldo atual</span><strong>${formatStock(item.currentWeight)}</strong></div>
-            <div><span>Fornecedor</span><strong>${item.supplier || "Não informado"}</strong></div>
+            <div><span>Fornecedor</span><strong>${supplier}</strong></div>
             <div><span>Custo médio/g</span><strong>${currency.format(getCostPerGram(item))}</strong></div>
             <div><span>Valor restante</span><strong>${currency.format(currentValue)}</strong></div>
           </div>
-          <div class="quick-card-actions" data-card-actions="${item.id}">
+          <div class="quick-card-actions" data-card-actions="${id}">
             <div class="quick-inputs">
               <input aria-label="Quantidade para movimentar" min="0" step="0.1" type="number" value="50">
               <input aria-label="Custo da entrada" min="0" step="0.01" type="number" placeholder="R$ entrada">
@@ -473,14 +586,19 @@ function renderTable() {
   const rows = filaments
     .map((item) => {
       const status = getStatus(item);
+      const colorHex = safeHexColor(item.colorHex);
+      const id = escapeHtml(item.id);
+      const title = escapeHtml(`${item.type} ${item.colorName}`);
+      const brand = escapeHtml(item.brand);
+      const supplier = escapeHtml(item.supplier || "Não informado");
       return `
         <tr>
-          <td><span class="swatch" style="background:${item.colorHex}"></span><strong>${item.type} ${item.colorName}</strong><br><small>${item.brand}</small></td>
-          <td>${item.supplier || "Não informado"}</td>
+          <td><span class="swatch" style="background:${colorHex}"></span><strong>${title}</strong><br><small>${brand}</small></td>
+          <td>${supplier}</td>
           <td>${formatStock(item.currentWeight)} / ${formatStock(item.initialWeight)}</td>
           <td>${currency.format(getCostPerGram(item))}/g<br><small>${currency.format(getCostPerGram(item) * 1000)}/kg</small></td>
           <td><span class="status ${status.className}">${status.label}</span></td>
-          <td><button class="danger-button" type="button" data-remove="${item.id}">Remover</button></td>
+          <td><button class="danger-button" type="button" data-remove="${id}">Remover</button></td>
         </tr>
       `;
     })
@@ -493,7 +611,7 @@ function renderFilamentOptions() {
   const selected = document.querySelector("#filament-select").value;
   const emptyOption = "<option value=\"\" disabled selected>Cadastre um filamento primeiro</option>";
   const optionHtml = filaments.length
-    ? filaments.map((item) => `<option value="${item.id}">${getFilamentLabel(item)}</option>`).join("")
+    ? filaments.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(getFilamentLabel(item))}</option>`).join("")
     : emptyOption;
 
   document.querySelector("#filament-select").innerHTML = optionHtml;
@@ -708,7 +826,7 @@ function calculatePricing() {
 
   document.querySelector("#cost-audit").innerHTML = filament
     ? `
-      <div><span>Filamento usado</span><strong>${filament.type} ${filament.colorName}</strong></div>
+      <div><span>Filamento usado</span><strong>${escapeHtml(`${filament.type} ${filament.colorName}`)}</strong></div>
       <div><span>Custo médio do filamento</span><strong>${currency.format(costPerGram)}/g</strong></div>
       <div><span>Custo médio por kg</span><strong>${currency.format(costPerGram * 1000)}/kg</strong></div>
       <div><span>Conta do material</span><strong>${grams.format(data.grams)}g × ${currency.format(costPerGram)}/g</strong></div>
@@ -983,8 +1101,48 @@ document.querySelector("#theme-toggle").addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
 
+document.querySelector("#login-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!supabaseClient) {
+    setAuthMessage("Configuração do Supabase não encontrada.", "error");
+    return;
+  }
+
+  const form = event.currentTarget;
+  const submitButton = form.querySelector("button[type='submit']");
+  const data = Object.fromEntries(new FormData(form).entries());
+
+  submitButton.disabled = true;
+  setAuthMessage("Validando acesso...", "");
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: String(data.email || "").trim(),
+    password: String(data.password || "")
+  });
+
+  submitButton.disabled = false;
+
+  if (error) {
+    setAuthMessage("E-mail ou senha inválidos.", "error");
+    return;
+  }
+
+  form.reset();
+  setAuthMessage("Login realizado.", "success");
+});
+
+document.querySelector("#logout-button").addEventListener("click", async () => {
+  if (!supabaseClient) return;
+
+  await supabaseClient.auth.signOut();
+  currentUser = null;
+  filaments = [];
+  localStorage.removeItem(STORAGE_KEY);
+  renderUserState();
+  showAuthScreen();
+});
+
 renderSmartPricingShell();
 normalizeVisibleText();
 applyTheme(currentTheme);
-renderAll();
 initializeCloudStorage();

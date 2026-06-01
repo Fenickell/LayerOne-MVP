@@ -70,10 +70,74 @@ body {
   transition: background-color 180ms ease, color 180ms ease;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 button,
 input,
 select {
   font: inherit;
+}
+
+.auth-screen {
+  align-items: center;
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.auth-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 20px;
+  margin: 0 auto;
+  max-width: 460px;
+  padding: 28px;
+  width: 100%;
+}
+
+.auth-logo {
+  background: transparent;
+  border-radius: 10px;
+  height: 76px;
+  object-fit: cover;
+  width: 76px;
+}
+
+.auth-card h1 {
+  font-size: 30px;
+  line-height: 1.08;
+}
+
+.auth-card p {
+  color: var(--muted);
+  line-height: 1.45;
+  margin-top: 8px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+}
+
+.auth-message {
+  color: var(--muted);
+  font-size: 13px;
+  min-height: 20px;
+}
+
+.auth-message.error {
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.auth-message.success {
+  color: var(--accent-dark);
+  font-weight: 800;
 }
 
 .app-header {
@@ -217,6 +281,24 @@ body[data-theme="dark"] .tab.active {
 .theme-button:hover {
   border-color: var(--accent);
   transform: translateY(-1px);
+}
+
+.user-pill {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 34px;
+  padding: 0 12px;
+}
+
+.header-logout {
+  min-height: 34px;
+  padding: 0 12px;
 }
 
 .primary-button {
