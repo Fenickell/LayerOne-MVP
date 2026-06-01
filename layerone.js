@@ -71,7 +71,6 @@ let appConfig = null;
 let currentUser = null;
 let currentProfile = null;
 let authMode = "signin";
-let pendingConfirmationEmail = "";
 let supabaseClient = null;
 let isCloudReady = false;
 let isHydratingCloud = false;
@@ -191,14 +190,6 @@ function setAuthMessage(message, type = "") {
   if (type) element.classList.add(type);
 }
 
-function toggleResendConfirmation(show, email = "") {
-  const button = document.querySelector("#resend-confirmation");
-  if (!button) return;
-
-  pendingConfirmationEmail = show ? email : "";
-  button.hidden = !show;
-}
-
 function setAuthMode(mode) {
   authMode = mode === "signup" ? "signup" : "signin";
   const submitButton = document.querySelector("#auth-submit");
@@ -220,11 +211,10 @@ function setAuthMode(mode) {
 
   if (helpText) {
     helpText.textContent = authMode === "signup"
-      ? "Você pode testar por 7 dias. Se o e-mail de confirmação estiver ativo, confirme antes de entrar."
+      ? "Você pode testar por 7 dias. Use uma senha com pelo menos 6 caracteres."
       : "Use seu e-mail e senha cadastrados.";
   }
 
-  toggleResendConfirmation(false);
   setAuthMessage(
     authMode === "signup"
       ? "Preencha e-mail e senha para criar sua conta."
@@ -243,7 +233,7 @@ function getAuthErrorMessage(error, mode) {
   }
 
   if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
-    return "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou reenvie a confirmação.";
+    return "O Supabase está exigindo confirmação por e-mail. Desative essa opção no painel para cadastro direto.";
   }
 
   if (code === "invalid_credentials" || message.includes("invalid login credentials")) {
@@ -259,7 +249,7 @@ function getAuthErrorMessage(error, mode) {
   }
 
   if (status === 429 || message.includes("rate limit") || message.includes("too many")) {
-    return "Limite de envio de e-mails do Supabase atingido. Aguarde alguns minutos ou configure SMTP próprio para liberar cadastros.";
+    return "O Supabase bloqueou temporariamente novas tentativas. Aguarde alguns minutos e tente de novo.";
   }
 
   if (mode === "signup") {
@@ -1271,36 +1261,6 @@ document.querySelectorAll("[data-auth-mode]").forEach((button) => {
   button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
 });
 
-document.querySelector("#resend-confirmation").addEventListener("click", async () => {
-  if (!supabaseClient || !pendingConfirmationEmail) return;
-
-  const button = document.querySelector("#resend-confirmation");
-  button.disabled = true;
-  setAuthMessage("Reenviando confirmação...", "");
-
-  try {
-    const { error } = await supabaseClient.auth.resend({
-      type: "signup",
-      email: pendingConfirmationEmail,
-      options: {
-        emailRedirectTo: window.location.origin
-      }
-    });
-
-    if (error) {
-      setAuthMessage(getAuthErrorMessage(error, "signup"), "error");
-      return;
-    }
-
-    setAuthMessage("Confirmação reenviada. Verifique seu e-mail.", "success");
-  } catch (error) {
-    console.warn("Falha ao reenviar confirmacao Supabase.", error);
-    setAuthMessage("Não foi possível reenviar agora. Tente novamente em alguns minutos.", "error");
-  } finally {
-    button.disabled = false;
-  }
-});
-
 document.querySelector("#login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabaseClient) {
@@ -1322,17 +1282,13 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   }
 
   submitButton.disabled = true;
-  toggleResendConfirmation(false);
   setAuthMessage(authMode === "signup" ? "Criando conta..." : "Validando acesso...", "");
 
   try {
     const { data: authData, error } = authMode === "signup"
       ? await supabaseClient.auth.signUp({
         email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin
-        }
+        password
       })
       : await supabaseClient.auth.signInWithPassword({
         email,
@@ -1340,19 +1296,14 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     });
 
     if (error) {
-      if (authMode === "signin" && (error.code === "email_not_confirmed" || String(error.message || "").toLowerCase().includes("email not confirmed"))) {
-        toggleResendConfirmation(true, email);
-      }
       setAuthMessage(getAuthErrorMessage(error, authMode), "error");
       return;
     }
 
     form.reset();
     if (authMode === "signup" && !authData.session) {
-      toggleResendConfirmation(true, email);
-      setAuthMessage("Conta criada. Verifique seu e-mail para confirmar o acesso antes de entrar.", "success");
+      setAuthMessage("Conta criada. Se o app não entrar automaticamente, desative a confirmação por e-mail no Supabase.", "success");
       setAuthMode("signin");
-      toggleResendConfirmation(true, email);
       return;
     }
 

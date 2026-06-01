@@ -163,10 +163,6 @@ select {
   margin: -4px 0 0;
 }
 
-.auth-resend {
-  width: 100%;
-}
-
 .auth-message.error {
   color: var(--danger);
   font-weight: 800;
