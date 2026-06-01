@@ -23,7 +23,7 @@
             <button data-auth-mode="signup" type="button">Criar conta</button>
           </div>
           <label>E-mail<input autocomplete="email" name="email" required type="email" placeholder="seu@email.com"></label>
-          <label>Senha<input autocomplete="current-password" name="password" required type="password" placeholder="Sua senha"></label>
+          <label>Senha<input autocomplete="current-password" minlength="6" name="password" required type="password" placeholder="Mínimo de 6 caracteres"></label>
           <button class="primary-button" id="auth-submit" type="submit">Entrar</button>
           <p class="auth-message" id="auth-message" role="status"></p>
         </form>

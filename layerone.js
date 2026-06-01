@@ -213,6 +213,11 @@ function setAuthMode(mode) {
 function getAuthErrorMessage(error, mode) {
   const status = Number(error?.status || error?.__isAuthError?.status || 0);
   const message = String(error?.message || "").toLowerCase();
+  const code = String(error?.code || error?.error_code || "").toLowerCase();
+
+  if (code === "weak_password" || message.includes("password should be at least")) {
+    return "A senha precisa ter pelo menos 6 caracteres.";
+  }
 
   if (status === 429 || message.includes("rate limit") || message.includes("too many")) {
     return "Limite de envio de e-mails do Supabase atingido. Aguarde alguns minutos ou configure SMTP próprio para liberar cadastros.";
@@ -1239,6 +1244,11 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   const data = Object.fromEntries(new FormData(form).entries());
   const email = String(data.email || "").trim();
   const password = String(data.password || "");
+
+  if (password.length < 6) {
+    setAuthMessage("A senha precisa ter pelo menos 6 caracteres.", "error");
+    return;
+  }
 
   submitButton.disabled = true;
   setAuthMessage(authMode === "signup" ? "Criando conta..." : "Validando acesso...", "");
