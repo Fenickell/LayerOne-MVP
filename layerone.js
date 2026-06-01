@@ -210,6 +210,21 @@ function setAuthMode(mode) {
   );
 }
 
+function getAuthErrorMessage(error, mode) {
+  const status = Number(error?.status || error?.__isAuthError?.status || 0);
+  const message = String(error?.message || "").toLowerCase();
+
+  if (status === 429 || message.includes("rate limit") || message.includes("too many")) {
+    return "Limite de envio de e-mails do Supabase atingido. Aguarde alguns minutos ou configure SMTP próprio para liberar cadastros.";
+  }
+
+  if (mode === "signup") {
+    return "Não foi possível criar a conta. Verifique se cadastro por e-mail está habilitado no Supabase.";
+  }
+
+  return "Conta não encontrada, senha incorreta ou e-mail ainda não confirmado.";
+}
+
 function showAuthScreen() {
   document.querySelector("#auth-screen").hidden = false;
   document.querySelector("#app-shell").hidden = true;
@@ -1240,10 +1255,10 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
       : await supabaseClient.auth.signInWithPassword({
         email,
         password
-      });
+    });
 
     if (error) {
-      setAuthMessage("E-mail, senha ou confirmação de acesso inválidos.", "error");
+      setAuthMessage(getAuthErrorMessage(error, authMode), "error");
       return;
     }
 
