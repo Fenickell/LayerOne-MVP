@@ -71,6 +71,7 @@ let appConfig = null;
 let currentUser = null;
 let currentProfile = null;
 let authMode = "signin";
+let pendingConfirmationEmail = "";
 let supabaseClient = null;
 let isCloudReady = false;
 let isHydratingCloud = false;
@@ -190,9 +191,19 @@ function setAuthMessage(message, type = "") {
   if (type) element.classList.add(type);
 }
 
+function toggleResendConfirmation(show, email = "") {
+  const button = document.querySelector("#resend-confirmation");
+  if (!button) return;
+
+  pendingConfirmationEmail = show ? email : "";
+  button.hidden = !show;
+}
+
 function setAuthMode(mode) {
   authMode = mode === "signup" ? "signup" : "signin";
   const submitButton = document.querySelector("#auth-submit");
+  const passwordInput = document.querySelector("#login-form input[name='password']");
+  const helpText = document.querySelector("#auth-help");
 
   document.querySelectorAll("[data-auth-mode]").forEach((button) => {
     button.classList.toggle("active", button.dataset.authMode === authMode);
@@ -202,9 +213,21 @@ function setAuthMode(mode) {
     submitButton.textContent = authMode === "signup" ? "Criar conta" : "Entrar";
   }
 
+  if (passwordInput) {
+    passwordInput.autocomplete = authMode === "signup" ? "new-password" : "current-password";
+    passwordInput.placeholder = authMode === "signup" ? "Crie uma senha com 6+ caracteres" : "Sua senha";
+  }
+
+  if (helpText) {
+    helpText.textContent = authMode === "signup"
+      ? "Você pode testar por 7 dias. Se o e-mail de confirmação estiver ativo, confirme antes de entrar."
+      : "Use seu e-mail e senha cadastrados.";
+  }
+
+  toggleResendConfirmation(false);
   setAuthMessage(
     authMode === "signup"
-      ? "Crie sua conta. Se a confirmação por e-mail estiver ativa, confirme o link antes de entrar."
+      ? "Preencha e-mail e senha para criar sua conta."
       : "",
     ""
   );
@@ -219,15 +242,31 @@ function getAuthErrorMessage(error, mode) {
     return "A senha precisa ter pelo menos 6 caracteres.";
   }
 
+  if (code === "email_not_confirmed" || message.includes("email not confirmed")) {
+    return "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada ou reenvie a confirmação.";
+  }
+
+  if (code === "invalid_credentials" || message.includes("invalid login credentials")) {
+    return "E-mail ou senha incorretos. Se ainda não tem conta, clique em Criar conta.";
+  }
+
+  if (code === "user_already_exists" || message.includes("already registered") || message.includes("user already")) {
+    return "Este e-mail já tem uma conta. Use Entrar ou recupere a senha quando esse recurso estiver disponível.";
+  }
+
+  if (code === "signup_disabled" || message.includes("signup is disabled")) {
+    return "Cadastro desativado no Supabase. Ative Email em Authentication > Providers.";
+  }
+
   if (status === 429 || message.includes("rate limit") || message.includes("too many")) {
     return "Limite de envio de e-mails do Supabase atingido. Aguarde alguns minutos ou configure SMTP próprio para liberar cadastros.";
   }
 
   if (mode === "signup") {
-    return "Não foi possível criar a conta. Verifique se cadastro por e-mail está habilitado no Supabase.";
+    return "Não foi possível criar a conta. Revise e-mail, senha e configuração de cadastro no Supabase.";
   }
 
-  return "Conta não encontrada, senha incorreta ou e-mail ainda não confirmado.";
+  return "Não foi possível entrar. Verifique seus dados e tente novamente.";
 }
 
 function showAuthScreen() {
@@ -1232,6 +1271,36 @@ document.querySelectorAll("[data-auth-mode]").forEach((button) => {
   button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
 });
 
+document.querySelector("#resend-confirmation").addEventListener("click", async () => {
+  if (!supabaseClient || !pendingConfirmationEmail) return;
+
+  const button = document.querySelector("#resend-confirmation");
+  button.disabled = true;
+  setAuthMessage("Reenviando confirmação...", "");
+
+  try {
+    const { error } = await supabaseClient.auth.resend({
+      type: "signup",
+      email: pendingConfirmationEmail,
+      options: {
+        emailRedirectTo: window.location.origin
+      }
+    });
+
+    if (error) {
+      setAuthMessage(getAuthErrorMessage(error, "signup"), "error");
+      return;
+    }
+
+    setAuthMessage("Confirmação reenviada. Verifique seu e-mail.", "success");
+  } catch (error) {
+    console.warn("Falha ao reenviar confirmacao Supabase.", error);
+    setAuthMessage("Não foi possível reenviar agora. Tente novamente em alguns minutos.", "error");
+  } finally {
+    button.disabled = false;
+  }
+});
+
 document.querySelector("#login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabaseClient) {
@@ -1240,6 +1309,8 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   }
 
   const form = event.currentTarget;
+  if (!form.reportValidity()) return;
+
   const submitButton = form.querySelector("button[type='submit']");
   const data = Object.fromEntries(new FormData(form).entries());
   const email = String(data.email || "").trim();
@@ -1251,6 +1322,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   }
 
   submitButton.disabled = true;
+  toggleResendConfirmation(false);
   setAuthMessage(authMode === "signup" ? "Criando conta..." : "Validando acesso...", "");
 
   try {
@@ -1268,14 +1340,19 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     });
 
     if (error) {
+      if (authMode === "signin" && (error.code === "email_not_confirmed" || String(error.message || "").toLowerCase().includes("email not confirmed"))) {
+        toggleResendConfirmation(true, email);
+      }
       setAuthMessage(getAuthErrorMessage(error, authMode), "error");
       return;
     }
 
     form.reset();
     if (authMode === "signup" && !authData.session) {
+      toggleResendConfirmation(true, email);
       setAuthMessage("Conta criada. Verifique seu e-mail para confirmar o acesso antes de entrar.", "success");
       setAuthMode("signin");
+      toggleResendConfirmation(true, email);
       return;
     }
 

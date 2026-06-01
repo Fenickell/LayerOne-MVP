@@ -156,6 +156,17 @@ select {
   min-height: 20px;
 }
 
+.auth-help {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+  margin: -4px 0 0;
+}
+
+.auth-resend {
+  width: 100%;
+}
+
 .auth-message.error {
   color: var(--danger);
   font-weight: 800;
