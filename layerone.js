@@ -1201,20 +1201,25 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   submitButton.disabled = true;
   setAuthMessage("Validando acesso...", "");
 
-  const { error } = await supabaseClient.auth.signInWithPassword({
-    email: String(data.email || "").trim(),
-    password: String(data.password || "")
-  });
+  try {
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email: String(data.email || "").trim(),
+      password: String(data.password || "")
+    });
 
-  submitButton.disabled = false;
+    if (error) {
+      setAuthMessage("E-mail, senha ou confirmação de acesso inválidos.", "error");
+      return;
+    }
 
-  if (error) {
-    setAuthMessage("E-mail ou senha inválidos.", "error");
-    return;
+    form.reset();
+    setAuthMessage("Login realizado.", "success");
+  } catch (error) {
+    console.warn("Falha de conexão no login Supabase.", error);
+    setAuthMessage("Não foi possível conectar ao Supabase. Verifique a URL do projeto e tente novamente.", "error");
+  } finally {
+    submitButton.disabled = false;
   }
-
-  form.reset();
-  setAuthMessage("Login realizado.", "success");
 });
 
 document.querySelector("#logout-button").addEventListener("click", async () => {
