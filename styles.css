@@ -198,6 +198,21 @@ h1 {
   max-width: 760px;
 }
 
+.trial-status {
+  align-items: center;
+  color: var(--accent-dark);
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 850;
+  gap: 6px;
+  line-height: 1.35;
+  margin-top: 8px;
+}
+
+.trial-status.expired {
+  color: var(--danger);
+}
+
 h2 {
   font-size: 20px;
 }

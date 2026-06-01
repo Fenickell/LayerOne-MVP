@@ -1,7 +1,9 @@
 const STORAGE_KEY = "layerone-mvp-filaments";
 const THEME_KEY = "layerone-mvp-theme";
 const SUPABASE_TABLE = "layerone_filaments";
+const PROFILE_TABLE = "layerone_profiles";
 const CONFIG_PLACEHOLDER = "COLE_SUA_URL_AQUI";
+const TRIAL_DAYS = 7;
 const MARKETPLACE_PRESETS = window.LayerOnePricingEngine?.MARKETPLACE_PRESETS || {};
 
 const demoFilaments = [
@@ -67,6 +69,7 @@ let filaments = loadFilaments();
 let currentTheme = loadTheme();
 let appConfig = null;
 let currentUser = null;
+let currentProfile = null;
 let supabaseClient = null;
 let isCloudReady = false;
 let isHydratingCloud = false;
@@ -199,6 +202,7 @@ function showAppShell() {
 function renderUserState() {
   const userEmail = document.querySelector("#user-email");
   const logoutButton = document.querySelector("#logout-button");
+  const trialStatus = document.querySelector("#trial-status");
   const shouldShow = Boolean(currentUser);
 
   if (userEmail) {
@@ -209,6 +213,57 @@ function renderUserState() {
   if (logoutButton) {
     logoutButton.hidden = !shouldShow;
   }
+
+  if (trialStatus && !shouldShow) {
+    trialStatus.hidden = true;
+    trialStatus.textContent = "";
+    trialStatus.classList.remove("expired");
+  }
+}
+
+function formatDate(date) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).format(date);
+}
+
+function getFallbackTrialProfile() {
+  if (!currentUser?.created_at) return null;
+
+  const startedAt = new Date(currentUser.created_at);
+  const expiresAt = new Date(startedAt);
+  expiresAt.setDate(expiresAt.getDate() + TRIAL_DAYS);
+
+  return {
+    trial_started_at: startedAt.toISOString(),
+    trial_expires_at: expiresAt.toISOString(),
+    plan_status: "trial"
+  };
+}
+
+function renderTrialStatus() {
+  const trialStatus = document.querySelector("#trial-status");
+  if (!trialStatus || !currentUser) return;
+
+  const profile = currentProfile || getFallbackTrialProfile();
+  if (!profile?.trial_expires_at) {
+    trialStatus.hidden = true;
+    return;
+  }
+
+  const now = new Date();
+  const expiresAt = new Date(profile.trial_expires_at);
+  const msRemaining = expiresAt.getTime() - now.getTime();
+  const daysRemaining = Math.max(0, Math.ceil(msRemaining / 86400000));
+  const isExpired = msRemaining <= 0;
+
+  trialStatus.hidden = false;
+  trialStatus.classList.toggle("expired", isExpired);
+  trialStatus.textContent = isExpired
+    ? `Teste expirado em ${formatDate(expiresAt)}`
+    : `Teste válido até ${formatDate(expiresAt)} · ${daysRemaining} dia${daysRemaining === 1 ? "" : "s"} restante${daysRemaining === 1 ? "" : "s"}`;
 }
 
 async function hydrateCloudFilaments() {
@@ -246,8 +301,38 @@ async function detectUserScopedStorage() {
   isUserScopedStorage = !error;
 }
 
+async function hydrateUserProfile() {
+  currentProfile = getFallbackTrialProfile();
+  if (!isCloudReady || !supabaseClient || !currentUser) {
+    renderTrialStatus();
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient
+      .from(PROFILE_TABLE)
+      .upsert(
+        {
+          user_id: currentUser.id,
+          email: currentUser.email || ""
+        },
+        { onConflict: "user_id" }
+      )
+      .select("trial_started_at, trial_expires_at, plan_status")
+      .single();
+
+    if (error) throw error;
+    currentProfile = data || currentProfile;
+  } catch (error) {
+    console.warn("Nao foi possivel carregar o perfil de teste. Usando fallback do Auth.", error);
+  }
+
+  renderTrialStatus();
+}
+
 async function handleAuthSession(session) {
   currentUser = session?.user || null;
+  currentProfile = null;
   renderUserState();
 
   if (!currentUser) {
@@ -259,6 +344,7 @@ async function handleAuthSession(session) {
 
   showAppShell();
   setAuthMessage("Login realizado.", "success");
+  await hydrateUserProfile();
   await detectUserScopedStorage();
   await hydrateCloudFilaments();
 }
@@ -1136,6 +1222,7 @@ document.querySelector("#logout-button").addEventListener("click", async () => {
 
   await supabaseClient.auth.signOut();
   currentUser = null;
+  currentProfile = null;
   filaments = [];
   localStorage.removeItem(STORAGE_KEY);
   renderUserState();
