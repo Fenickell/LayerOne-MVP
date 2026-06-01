@@ -18,9 +18,13 @@
           <p>Seu estoque, custos e precificações ficam vinculados ao usuário autenticado.</p>
         </div>
         <form class="auth-form" id="login-form">
+          <div class="auth-toggle" role="tablist" aria-label="Tipo de acesso">
+            <button class="active" data-auth-mode="signin" type="button">Entrar</button>
+            <button data-auth-mode="signup" type="button">Criar conta</button>
+          </div>
           <label>E-mail<input autocomplete="email" name="email" required type="email" placeholder="seu@email.com"></label>
           <label>Senha<input autocomplete="current-password" name="password" required type="password" placeholder="Sua senha"></label>
-          <button class="primary-button" type="submit">Entrar</button>
+          <button class="primary-button" id="auth-submit" type="submit">Entrar</button>
           <p class="auth-message" id="auth-message" role="status"></p>
         </form>
       </div>

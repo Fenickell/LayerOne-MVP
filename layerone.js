@@ -70,6 +70,7 @@ let currentTheme = loadTheme();
 let appConfig = null;
 let currentUser = null;
 let currentProfile = null;
+let authMode = "signin";
 let supabaseClient = null;
 let isCloudReady = false;
 let isHydratingCloud = false;
@@ -187,6 +188,26 @@ function setAuthMessage(message, type = "") {
   element.textContent = message;
   element.classList.remove("error", "success");
   if (type) element.classList.add(type);
+}
+
+function setAuthMode(mode) {
+  authMode = mode === "signup" ? "signup" : "signin";
+  const submitButton = document.querySelector("#auth-submit");
+
+  document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.authMode === authMode);
+  });
+
+  if (submitButton) {
+    submitButton.textContent = authMode === "signup" ? "Criar conta" : "Entrar";
+  }
+
+  setAuthMessage(
+    authMode === "signup"
+      ? "Crie sua conta. Se a confirmação por e-mail estiver ativa, confirme o link antes de entrar."
+      : "",
+    ""
+  );
 }
 
 function showAuthScreen() {
@@ -1187,6 +1208,10 @@ document.querySelector("#theme-toggle").addEventListener("click", () => {
   applyTheme(currentTheme === "dark" ? "light" : "dark");
 });
 
+document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+  button.addEventListener("click", () => setAuthMode(button.dataset.authMode));
+});
+
 document.querySelector("#login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabaseClient) {
@@ -1197,15 +1222,25 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   const form = event.currentTarget;
   const submitButton = form.querySelector("button[type='submit']");
   const data = Object.fromEntries(new FormData(form).entries());
+  const email = String(data.email || "").trim();
+  const password = String(data.password || "");
 
   submitButton.disabled = true;
-  setAuthMessage("Validando acesso...", "");
+  setAuthMessage(authMode === "signup" ? "Criando conta..." : "Validando acesso...", "");
 
   try {
-    const { error } = await supabaseClient.auth.signInWithPassword({
-      email: String(data.email || "").trim(),
-      password: String(data.password || "")
-    });
+    const { data: authData, error } = authMode === "signup"
+      ? await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin
+        }
+      })
+      : await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
 
     if (error) {
       setAuthMessage("E-mail, senha ou confirmação de acesso inválidos.", "error");
@@ -1213,7 +1248,13 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     }
 
     form.reset();
-    setAuthMessage("Login realizado.", "success");
+    if (authMode === "signup" && !authData.session) {
+      setAuthMessage("Conta criada. Verifique seu e-mail para confirmar o acesso antes de entrar.", "success");
+      setAuthMode("signin");
+      return;
+    }
+
+    setAuthMessage(authMode === "signup" ? "Conta criada e login realizado." : "Login realizado.", "success");
   } catch (error) {
     console.warn("Falha de conexão no login Supabase.", error);
     setAuthMessage("Não foi possível conectar ao Supabase. Verifique a URL do projeto e tente novamente.", "error");
