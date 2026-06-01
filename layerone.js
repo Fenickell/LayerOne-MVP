@@ -353,7 +353,11 @@ async function hydrateCloudFilaments() {
     renderAll();
   } catch (error) {
     console.warn("Supabase indisponivel. Mantendo dados locais.", error);
-    filaments = loadFilaments(false);
+    filaments = [];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filaments));
+    if (String(error?.code || "") === "42P01") {
+      setAuthMessage("Banco ainda não configurado. Rode o SQL completo do LayerOne no Supabase.", "error");
+    }
     renderAll();
   } finally {
     isHydratingCloud = false;
