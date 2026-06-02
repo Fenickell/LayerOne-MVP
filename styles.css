@@ -551,6 +551,23 @@ main {
   margin-bottom: 16px;
 }
 
+.compact-grid {
+  margin-bottom: 0;
+}
+
+.smart-card {
+  background: linear-gradient(135deg, var(--row-bg), var(--surface));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow-soft);
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.smart-card:first-of-type {
+  margin-top: 0;
+}
+
 .smart-block {
   border-top: 1px solid var(--line);
   margin-top: 18px;
@@ -569,6 +586,9 @@ main {
 }
 
 .smart-block-title {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
@@ -580,6 +600,20 @@ main {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.4;
+}
+
+.smart-index {
+  align-items: center;
+  background: var(--accent);
+  border-radius: 50%;
+  color: white;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 900;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
 }
 
 .smart-flow {
@@ -626,6 +660,10 @@ main {
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-bottom: 14px;
+}
+
+.compact-modes {
+  gap: 10px;
 }
 
 .mode-card {

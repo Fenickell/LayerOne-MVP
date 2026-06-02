@@ -884,63 +884,85 @@ function renderSmartPricingShell() {
   form.innerHTML = `
     <div class="section-title">
       <h2>Precificação inteligente</h2>
-      <span>Venda com margem líquida, marketplace e produção em lote</span>
+      <span>Custo real, lote, marketplace e margem em uma leitura</span>
     </div>
 
-    <ol class="smart-flow" aria-label="Etapas da precificação">
-      <li class="active"><strong>1</strong><span>Produto</span></li>
-      <li><strong>2</strong><span>Produção</span></li>
-      <li><strong>3</strong><span>Venda</span></li>
-      <li><strong>4</strong><span>Resultado</span></li>
-    </ol>
-
-    <div class="smart-block">
+    <div class="smart-card">
       <div class="smart-block-title">
-        <h3>O que será vendido?</h3>
-        <p>Defina o produto, o filamento e se a oferta é uma peça individual ou um kit.</p>
+        <span class="smart-index">1</span>
+        <div>
+          <h3>Venda e marketplace</h3>
+          <p>Defina o item vendido e a margem líquida desejada.</p>
+        </div>
       </div>
       <div class="form-grid">
         <label>Produto<input name="productName" value="Chaveiro articulado"></label>
-        <label>Filamento<select name="filamentId" id="smart-filament-select"></select></label>
         <label>Marketplace<select name="marketplace" id="smart-marketplace"></select></label>
         <label>Margem líquida desejada (%)<input name="targetNetMarginPercent" min="0" max="80" step="0.1" type="number" value="35"></label>
+        <label>Peças por kit/oferta<input name="unitsPerOffer" min="1" step="1" type="number" value="1"></label>
       </div>
     </div>
 
-    <div class="smart-block">
+    <div class="smart-card">
       <div class="smart-block-title">
-        <h3>Como será produzido?</h3>
-        <p>Use unitário para uma peça sozinha ou plate quando várias peças saem na mesma impressão.</p>
-      </div>
-      <div class="mode-card-grid" role="radiogroup" aria-label="Modo de produção">
-        <label class="mode-card"><input checked name="mode" type="radio" value="unit"><strong>Unitário</strong><span>1 peça impressa sozinha</span></label>
-        <label class="mode-card"><input name="mode" type="radio" value="plate"><strong>Plate / lote</strong><span>várias peças na mesma impressão</span></label>
-      </div>
-      <div class="form-grid">
-        <label>Peças na impressão<input name="physicalUnits" min="1" step="1" type="number" value="1"></label>
-        <label>Peças por kit/oferta<input name="unitsPerOffer" min="1" step="1" type="number" value="1"></label>
-        <label>Peso total da impressão (g)<input name="totalWeightGrams" min="0" step="0.1" type="number" value="8"></label>
-        <label>Falhas/perdas (%)<input name="failureRatePercent" min="0" step="0.1" type="number" value="8"></label>
+        <span class="smart-index">2</span>
+        <div>
+          <h3>Impressora e energia</h3>
+          <p>Informe o tempo total da impressão e o consumo elétrico.</p>
+        </div>
       </div>
       <div class="time-grid">
         <label>Tempo total - horas<input name="totalTimeWholeHours" min="0" step="1" type="number" value="0"></label>
         <label>Tempo total - minutos<input name="totalTimeMinutes" min="0" max="59" step="1" type="number" value="40"></label>
       </div>
-    </div>
-
-    <details class="smart-advanced">
-      <summary>Custos e parâmetros avançados</summary>
-      <div class="form-grid">
-        <label>Embalagem por oferta (R$)<input name="packagingCostPerOffer" min="0" step="0.01" type="number" value="1.20"></label>
-        <label>Mão de obra por oferta (R$)<input name="laborCostPerOffer" min="0" step="0.01" type="number" value="1.00"></label>
-        <label>Extras por oferta (R$)<input name="extraCostPerOffer" min="0" step="0.01" type="number" value="0"></label>
-        <label>Custos extras do lote (R$)<input name="batchExtraCost" min="0" step="0.01" type="number" value="0"></label>
+      <div class="form-grid compact-grid">
         <label>kWh local (R$)<input name="kwhCost" min="0" step="0.01" type="number" value="0.95"></label>
         <label>Consumo médio (kW)<input name="printerKw" min="0" step="0.01" type="number" value="0.12"></label>
-        <label>Valor Bambulab A1 (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500"></label>
-        <label>Vida útil estimada (h)<input name="machineLifeHours" min="1" step="1" type="number" value="3000"></label>
       </div>
-    </details>
+    </div>
+
+    <div class="smart-card">
+      <div class="smart-block-title">
+        <span class="smart-index">3</span>
+        <div>
+          <h3>Filamento</h3>
+          <p>O custo por grama vem do estoque cadastrado.</p>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label>Filamento<select name="filamentId" id="smart-filament-select"></select></label>
+        <label>Peso total usado (g)<input name="totalWeightGrams" min="0" step="0.1" type="number" value="8"></label>
+      </div>
+    </div>
+
+    <div class="smart-card">
+      <div class="smart-block-title">
+        <span class="smart-index">4</span>
+        <div>
+          <h3>Lote e custos extras</h3>
+          <p>Use plate quando várias peças saem juntas na mesma impressão.</p>
+        </div>
+      </div>
+      <div class="mode-card-grid compact-modes" role="radiogroup" aria-label="Modo de produção">
+        <label class="mode-card"><input checked name="mode" type="radio" value="unit"><strong>Unitário</strong><span>1 peça sozinha</span></label>
+        <label class="mode-card"><input name="mode" type="radio" value="plate"><strong>Plate / lote</strong><span>ratear entre peças</span></label>
+      </div>
+      <div class="form-grid">
+        <label>Peças na impressão<input name="physicalUnits" min="1" step="1" type="number" value="1"></label>
+        <label>Falhas/perdas (%)<input name="failureRatePercent" min="0" step="0.1" type="number" value="8"></label>
+        <label>Embalagem por oferta (R$)<input name="packagingCostPerOffer" min="0" step="0.01" type="number" value="1.20"></label>
+        <label>Mão de obra por oferta (R$)<input name="laborCostPerOffer" min="0" step="0.01" type="number" value="1.00"></label>
+        <label>Outros custos por oferta (R$)<input name="extraCostPerOffer" min="0" step="0.01" type="number" value="0"></label>
+        <label>Custo extra do lote (R$)<input name="batchExtraCost" min="0" step="0.01" type="number" value="0"></label>
+      </div>
+      <details class="smart-advanced">
+        <summary>Parâmetros da impressora</summary>
+        <div class="form-grid">
+          <label>Valor Bambulab A1 (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500"></label>
+          <label>Vida útil estimada (h)<input name="machineLifeHours" min="1" step="1" type="number" value="3000"></label>
+        </div>
+      </details>
+    </div>
   `;
 }
 
