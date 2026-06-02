@@ -589,13 +589,12 @@ function getFilamentLabel(item) {
 }
 
 function setActiveTab(tabName) {
-  const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
   const panel = document.querySelector(`#${tabName}`);
-  if (!tab || !panel) return;
+  if (!panel) return;
 
   document.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
   document.querySelectorAll(".tab-panel").forEach((item) => item.classList.remove("active"));
-  tab.classList.add("active");
+  document.querySelectorAll(`.tab[data-tab="${tabName}"]`).forEach((item) => item.classList.add("active"));
   panel.classList.add("active");
 }
 
