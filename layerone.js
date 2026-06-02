@@ -271,6 +271,7 @@ function showAppShell() {
 
 function renderUserState() {
   const userEmail = document.querySelector("#user-email");
+  const sidebarUserEmail = document.querySelector("#sidebar-user-email");
   const logoutButton = document.querySelector("#logout-button");
   const trialStatus = document.querySelector("#trial-status");
   const shouldShow = Boolean(currentUser);
@@ -278,6 +279,10 @@ function renderUserState() {
   if (userEmail) {
     userEmail.hidden = !shouldShow;
     userEmail.textContent = currentUser?.email || "";
+  }
+
+  if (sidebarUserEmail) {
+    sidebarUserEmail.textContent = currentUser?.email || "Conta ativa";
   }
 
   if (logoutButton) {
