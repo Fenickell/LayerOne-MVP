@@ -751,6 +751,16 @@ function safeHexColor(value) {
   return /^#[0-9a-f]{6}$/i.test(color) ? color : "#22c55e";
 }
 
+function syncColorPresetState() {
+  const colorInput = document.querySelector('#filament-form input[name="colorHex"]');
+  if (!colorInput) return;
+
+  const currentColor = safeHexColor(colorInput.value).toLowerCase();
+  document.querySelectorAll("[data-color-preset]").forEach((button) => {
+    button.classList.toggle("active", String(button.dataset.colorPreset || "").toLowerCase() === currentColor);
+  });
+}
+
 function getStatus(filament) {
   const percent = getRemainingPercent(filament);
   if (Number(filament.currentWeight) <= Number(filament.minAlert) || percent <= 20) {
@@ -1562,7 +1572,41 @@ document.querySelector("#filament-form").addEventListener("submit", (event) => {
   });
 
   event.currentTarget.reset();
+  event.currentTarget.querySelector(".color-field")?.classList.remove("palette-open");
+  syncColorPresetState();
   renderAll();
+});
+
+document.querySelector("#filament-form")?.addEventListener("focusin", (event) => {
+  if (event.target.closest(".color-field")) {
+    event.target.closest(".color-field").classList.add("palette-open");
+  }
+});
+
+document.querySelector("#filament-form")?.addEventListener("click", (event) => {
+  const colorField = event.target.closest(".color-field");
+  if (colorField) colorField.classList.add("palette-open");
+
+  const presetButton = event.target.closest("[data-color-preset]");
+  if (!presetButton) return;
+
+  const colorInput = event.currentTarget.querySelector('input[name="colorHex"]');
+  colorInput.value = safeHexColor(presetButton.dataset.colorPreset);
+  colorInput.dispatchEvent(new Event("input", { bubbles: true }));
+  syncColorPresetState();
+});
+
+document.querySelector('#filament-form input[name="colorHex"]')?.addEventListener("input", syncColorPresetState);
+
+document.querySelectorAll("[data-color-preset]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const colorInput = document.querySelector('#filament-form input[name="colorHex"]');
+    if (!colorInput) return;
+
+    colorInput.value = safeHexColor(button.dataset.colorPreset);
+    colorInput.dispatchEvent(new Event("input", { bubbles: true }));
+    syncColorPresetState();
+  });
 });
 
 document.querySelector("#filament-table").addEventListener("click", (event) => {
@@ -1788,5 +1832,6 @@ document.querySelector("#logout-button").addEventListener("click", async () => {
 
 renderSmartPricingShell();
 normalizeVisibleText();
+syncColorPresetState();
 applyTheme(currentTheme);
 initializeCloudStorage();

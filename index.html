@@ -187,7 +187,25 @@
               <label>Fornecedor / Local de compra<input required name="supplier" placeholder="Shopee, Mercado Livre, Loja local"></label>
               <label>Tipo<input required name="type" placeholder="PLA Matte"></label>
               <label>Cor<input required name="colorName" placeholder="Preto"></label>
-              <label>Cor visual<input required name="colorHex" type="color" value="#202124"></label>
+              <div class="color-field">
+                <span class="field-label">Cor visual</span>
+                <input required name="colorHex" type="color" value="#202124" aria-describedby="color-palette-help">
+                <span class="color-palette-help" id="color-palette-help">Escolha livremente ou use uma cor padrão para repetir o mesmo tom.</span>
+                <span class="color-palette" aria-label="Cores padrão">
+                  <button aria-label="Preto" data-color-preset="#202124" style="--preset-color:#202124" title="Preto" type="button"></button>
+                  <button aria-label="Branco" data-color-preset="#f8fafc" style="--preset-color:#f8fafc" title="Branco" type="button"></button>
+                  <button aria-label="Cinza" data-color-preset="#6b7280" style="--preset-color:#6b7280" title="Cinza" type="button"></button>
+                  <button aria-label="Vermelho" data-color-preset="#ef4444" style="--preset-color:#ef4444" title="Vermelho" type="button"></button>
+                  <button aria-label="Laranja" data-color-preset="#f97316" style="--preset-color:#f97316" title="Laranja" type="button"></button>
+                  <button aria-label="Amarelo" data-color-preset="#facc15" style="--preset-color:#facc15" title="Amarelo" type="button"></button>
+                  <button aria-label="Amarelo vivo" data-color-preset="#ffff00" style="--preset-color:#ffff00" title="Amarelo vivo" type="button"></button>
+                  <button aria-label="Verde" data-color-preset="#22c55e" style="--preset-color:#22c55e" title="Verde" type="button"></button>
+                  <button aria-label="Azul" data-color-preset="#2563eb" style="--preset-color:#2563eb" title="Azul" type="button"></button>
+                  <button aria-label="Roxo" data-color-preset="#7c3aed" style="--preset-color:#7c3aed" title="Roxo" type="button"></button>
+                  <button aria-label="Rosa" data-color-preset="#ec4899" style="--preset-color:#ec4899" title="Rosa" type="button"></button>
+                  <button aria-label="Dourado" data-color-preset="#c9972b" style="--preset-color:#c9972b" title="Dourado" type="button"></button>
+                </span>
+              </div>
               <label>Peso do rolo/lote (g)<input required min="1" name="initialWeight" type="number" value="1000"></label>
               <label>Saldo atual (g)<input required min="0" name="currentWeight" type="number" value="1000"></label>
               <label>Custo total pago no rolo (R$)<input required min="0" step="0.01" name="rollCost" type="number" value="95"></label>
