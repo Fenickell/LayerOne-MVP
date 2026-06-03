@@ -1,6 +1,8 @@
 const STORAGE_KEY = "layerone-mvp-filaments";
+const PRINTER_STORAGE_KEY = "layerone-mvp-printers";
 const THEME_KEY = "layerone-mvp-theme";
 const SUPABASE_TABLE = "layerone_filaments";
+const PRINTER_TABLE = "layerone_printers";
 const PROFILE_TABLE = "layerone_profiles";
 const CONFIG_PLACEHOLDER = "COLE_SUA_URL_AQUI";
 const TRIAL_DAYS = 7;
@@ -65,7 +67,35 @@ const demoFilaments = [
   }
 ];
 
+const demoPrinters = [
+  {
+    id: crypto.randomUUID(),
+    name: "Bambu Lab A1",
+    model: "A1",
+    purchaseCost: 2500,
+    lifeHours: 3000,
+    averageKw: 0.12
+  },
+  {
+    id: crypto.randomUUID(),
+    name: "Snapmaker",
+    model: "Snapmaker",
+    purchaseCost: 4500,
+    lifeHours: 3500,
+    averageKw: 0.18
+  },
+  {
+    id: crypto.randomUUID(),
+    name: "Bambu Lab H2D",
+    model: "H2D",
+    purchaseCost: 14000,
+    lifeHours: 5000,
+    averageKw: 0.28
+  }
+];
+
 let filaments = loadFilaments();
+let printers = loadPrinters();
 let currentTheme = loadTheme();
 let appConfig = null;
 let currentUser = null;
@@ -75,6 +105,7 @@ let supabaseClient = null;
 let isCloudReady = false;
 let isHydratingCloud = false;
 let isUserScopedStorage = false;
+let isPrinterCloudReady = true;
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -83,6 +114,10 @@ const currency = new Intl.NumberFormat("pt-BR", {
 
 const grams = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 1
+});
+
+const decimal = new Intl.NumberFormat("pt-BR", {
+  maximumFractionDigits: 2
 });
 
 function loadFilaments(useDemoFallback = true) {
@@ -94,6 +129,18 @@ function loadFilaments(useDemoFallback = true) {
     return Array.isArray(parsed) ? normalizeFilaments(parsed) : useDemoFallback ? demoFilaments : [];
   } catch {
     return useDemoFallback ? demoFilaments : [];
+  }
+}
+
+function loadPrinters(useDemoFallback = true) {
+  const stored = localStorage.getItem(PRINTER_STORAGE_KEY);
+  if (!stored) return useDemoFallback ? demoPrinters : [];
+
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? normalizePrinters(parsed) : useDemoFallback ? demoPrinters : [];
+  } catch {
+    return useDemoFallback ? demoPrinters : [];
   }
 }
 
@@ -115,9 +162,25 @@ function normalizeFilaments(items) {
   });
 }
 
+function normalizePrinters(items) {
+  return items.map((item) => ({
+    id: item.id || crypto.randomUUID(),
+    name: String(item.name || item.model || "Impressora 3D").trim(),
+    model: String(item.model || item.name || "Modelo não informado").trim(),
+    purchaseCost: Number(item.purchaseCost || item.purchase_cost || 0),
+    lifeHours: Math.max(1, Number(item.lifeHours || item.life_hours || 3000)),
+    averageKw: Number(item.averageKw || item.average_kw || 0.12)
+  }));
+}
+
 function saveFilaments() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(filaments));
   if (currentUser) syncFilamentsToCloud();
+}
+
+function savePrinters() {
+  localStorage.setItem(PRINTER_STORAGE_KEY, JSON.stringify(printers));
+  if (currentUser) syncPrintersToCloud();
 }
 
 function isConfigReady(config) {
@@ -178,6 +241,30 @@ function fromDatabaseRow(row) {
     avgCostPerGram: Number(row.avg_cost_per_gram || 0),
     stockValue: Number(row.stock_value || 0),
     minAlert: Number(row.min_alert || 0)
+  };
+}
+
+function toPrinterDatabaseRow(item) {
+  return {
+    id: item.id,
+    user_id: currentUser?.id || null,
+    name: item.name,
+    model: item.model,
+    purchase_cost: Number(item.purchaseCost || 0),
+    life_hours: Number(item.lifeHours || 0),
+    average_kw: Number(item.averageKw || 0),
+    updated_at: new Date().toISOString()
+  };
+}
+
+function fromPrinterDatabaseRow(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    model: row.model,
+    purchaseCost: Number(row.purchase_cost || 0),
+    lifeHours: Number(row.life_hours || 0),
+    averageKw: Number(row.average_kw || 0)
   };
 }
 
@@ -369,6 +456,34 @@ async function hydrateCloudFilaments() {
   }
 }
 
+async function hydrateCloudPrinters() {
+  if (!isCloudReady || !supabaseClient || !currentUser || !isPrinterCloudReady) return;
+
+  try {
+    isHydratingCloud = true;
+    const { data, error } = await supabaseClient
+      .from(PRINTER_TABLE)
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (error) throw error;
+
+    printers = Array.isArray(data) ? normalizePrinters(data.map(fromPrinterDatabaseRow)) : [];
+    localStorage.setItem(PRINTER_STORAGE_KEY, JSON.stringify(printers));
+    renderAll();
+  } catch (error) {
+    console.warn("Tabela de impressoras indisponivel. Mantendo impressoras locais.", error);
+    if (String(error?.code || "") === "42P01") {
+      isPrinterCloudReady = false;
+    }
+    printers = loadPrinters(true);
+    localStorage.setItem(PRINTER_STORAGE_KEY, JSON.stringify(printers));
+    renderAll();
+  } finally {
+    isHydratingCloud = false;
+  }
+}
+
 async function detectUserScopedStorage() {
   if (!isCloudReady || !supabaseClient) return;
 
@@ -416,6 +531,7 @@ async function handleAuthSession(session) {
 
   if (!currentUser) {
     filaments = [];
+    printers = [];
     showAuthScreen();
     setAuthMessage("", "");
     return;
@@ -426,6 +542,7 @@ async function handleAuthSession(session) {
   await hydrateUserProfile();
   await detectUserScopedStorage();
   await hydrateCloudFilaments();
+  await hydrateCloudPrinters();
 }
 
 async function initializeCloudStorage() {
@@ -434,6 +551,7 @@ async function initializeCloudStorage() {
   if (!isConfigReady(appConfig) || !window.supabase?.createClient) {
     isCloudReady = false;
     filaments = loadFilaments(true);
+    printers = loadPrinters(true);
     showAppShell();
     renderUserState();
     renderAll();
@@ -475,6 +593,26 @@ async function syncFilamentsToCloud() {
   }
 }
 
+async function syncPrintersToCloud() {
+  if (!isCloudReady || isHydratingCloud || !supabaseClient || !currentUser || !isPrinterCloudReady) return;
+
+  try {
+    const rows = printers.map(toPrinterDatabaseRow);
+    if (!rows.length) return;
+
+    const { error } = await supabaseClient
+      .from(PRINTER_TABLE)
+      .upsert(rows, { onConflict: "id" });
+
+    if (error) throw error;
+  } catch (error) {
+    console.warn("Nao foi possivel sincronizar impressoras com Supabase.", error);
+    if (String(error?.code || "") === "42P01") {
+      isPrinterCloudReady = false;
+    }
+  }
+}
+
 async function deleteFilamentFromCloud(filamentId) {
   if (!isCloudReady || !supabaseClient || !currentUser || !filamentId) return;
 
@@ -487,6 +625,21 @@ async function deleteFilamentFromCloud(filamentId) {
     if (error) throw error;
   } catch (error) {
     console.warn("Nao foi possivel excluir no Supabase.", error);
+  }
+}
+
+async function deletePrinterFromCloud(printerId) {
+  if (!isCloudReady || !supabaseClient || !currentUser || !printerId || !isPrinterCloudReady) return;
+
+  try {
+    const { error } = await supabaseClient
+      .from(PRINTER_TABLE)
+      .delete()
+      .eq("id", printerId);
+
+    if (error) throw error;
+  } catch (error) {
+    console.warn("Nao foi possivel excluir impressora no Supabase.", error);
   }
 }
 
@@ -593,6 +746,31 @@ function getFilamentLabel(item) {
   return `${item.type} ${item.colorName} - ${item.brand} (${item.supplier || "sem fornecedor"})`;
 }
 
+function getPrinterLabel(item) {
+  return `${item.name} - ${currency.format(item.purchaseCost)} / ${grams.format(item.lifeHours)}h`;
+}
+
+function getSelectedPrinter(printerId) {
+  return printers.find((item) => item.id === printerId) || printers[0] || null;
+}
+
+function getPrinterDepreciationPerHour(printer) {
+  if (!printer) return 0;
+  return Number(printer.purchaseCost || 0) / Math.max(1, Number(printer.lifeHours || 1));
+}
+
+function applyPrinterToForm(form, printer) {
+  if (!form || !printer) return;
+
+  const kwInput = form.querySelector('[name="printerKw"]');
+  const costInput = form.querySelector('[name="machineCost"]');
+  const lifeInput = form.querySelector('[name="machineLife"], [name="machineLifeHours"]');
+
+  if (kwInput) kwInput.value = Number(printer.averageKw || 0);
+  if (costInput) costInput.value = Number(printer.purchaseCost || 0);
+  if (lifeInput) lifeInput.value = Number(printer.lifeHours || 0);
+}
+
 function setActiveTab(tabName) {
   const panel = document.querySelector(`#${tabName}`);
   if (!panel) return;
@@ -640,6 +818,13 @@ function changeFilamentStock(filamentId, amount, mode, entryCost = 0) {
 function removeFilament(filamentId) {
   filaments = filaments.filter((item) => item.id !== filamentId);
   deleteFilamentFromCloud(filamentId);
+  renderAll();
+}
+
+function removePrinter(printerId) {
+  printers = printers.filter((item) => item.id !== printerId);
+  savePrinters();
+  deletePrinterFromCloud(printerId);
   renderAll();
 }
 
@@ -771,6 +956,32 @@ function renderTable() {
   document.querySelector("#filament-table").innerHTML = rows || "<tr><td colspan='6'>Nenhum filamento cadastrado.</td></tr>";
 }
 
+function renderPrinterTable() {
+  const table = document.querySelector("#printer-table");
+  if (!table) return;
+
+  const rows = printers
+    .map((item) => {
+      const id = escapeHtml(item.id);
+      const name = escapeHtml(item.name);
+      const model = escapeHtml(item.model);
+      const depreciationPerHour = getPrinterDepreciationPerHour(item);
+      return `
+        <tr>
+          <td><strong>${name}</strong><br><small>${model}</small></td>
+          <td>${currency.format(item.purchaseCost)}</td>
+          <td>${grams.format(item.lifeHours)}h</td>
+          <td>${decimal.format(item.averageKw)} kW</td>
+          <td>${currency.format(depreciationPerHour)}/h</td>
+          <td><button class="danger-button" type="button" data-remove-printer="${id}">Remover</button></td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  table.innerHTML = rows || "<tr><td colspan='6'>Nenhuma impressora cadastrada.</td></tr>";
+}
+
 function renderFilamentOptions() {
   const selected = document.querySelector("#filament-select").value;
   const emptyOption = "<option value=\"\" disabled selected>Cadastre um filamento primeiro</option>";
@@ -801,6 +1012,32 @@ function renderFilamentOptions() {
       smartSelect.value = smartSelected;
     }
   }
+}
+
+function renderPrinterOptions() {
+  const selects = [
+    document.querySelector("#printer-select"),
+    document.querySelector("#smart-printer-select")
+  ].filter(Boolean);
+
+  const emptyOption = "<option value=\"\" disabled selected>Cadastre uma impressora primeiro</option>";
+  const optionHtml = printers.length
+    ? printers.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(getPrinterLabel(item))}</option>`).join("")
+    : emptyOption;
+
+  selects.forEach((select) => {
+    const selected = select.value;
+    select.innerHTML = optionHtml;
+
+    if (printers.some((item) => item.id === selected)) {
+      select.value = selected;
+    }
+  });
+
+  const pricingForm = document.querySelector("#pricing-form");
+  const smartForm = document.querySelector("#smart-pricing-form");
+  applyPrinterToForm(pricingForm, getSelectedPrinter(document.querySelector("#printer-select")?.value));
+  applyPrinterToForm(smartForm, getSelectedPrinter(document.querySelector("#smart-printer-select")?.value));
 }
 
 function renderMarketplaceOptions() {
@@ -920,8 +1157,9 @@ function renderSmartPricingShell() {
         <label>Tempo total - minutos<input name="totalTimeMinutes" min="0" max="59" step="1" type="number" value="40"></label>
       </div>
       <div class="form-grid compact-grid">
+        <label>Impressora usada<select name="printerId" id="smart-printer-select"></select></label>
         <label>kWh local (R$)<input name="kwhCost" min="0" step="0.01" type="number" value="0.95"></label>
-        <label>Consumo médio (kW)<input name="printerKw" min="0" step="0.01" type="number" value="0.12"></label>
+        <label>Consumo médio da impressora (kW)<input name="printerKw" min="0" step="0.01" type="number" value="0.12" readonly></label>
       </div>
     </div>
 
@@ -962,8 +1200,8 @@ function renderSmartPricingShell() {
       <details class="smart-advanced">
         <summary>Parâmetros da impressora</summary>
         <div class="form-grid">
-          <label>Valor Bambulab A1 (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500"></label>
-          <label>Vida útil estimada (h)<input name="machineLifeHours" min="1" step="1" type="number" value="3000"></label>
+          <label>Valor da impressora (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500" readonly></label>
+          <label>Vida útil estimada (h)<input name="machineLifeHours" min="1" step="1" type="number" value="3000" readonly></label>
         </div>
       </details>
     </div>
@@ -975,7 +1213,7 @@ function readPricingForm() {
   const data = Object.fromEntries(form.entries());
 
   for (const key of Object.keys(data)) {
-    if (key !== "productName" && key !== "filamentId") {
+    if (!["productName", "filamentId", "printerId"].includes(key)) {
       data[key] = Number(data[key] || 0);
     }
   }
@@ -986,6 +1224,13 @@ function readPricingForm() {
 function calculatePricing() {
   const data = readPricingForm();
   const filament = filaments.find((item) => item.id === data.filamentId) || filaments[0];
+  const printer = getSelectedPrinter(data.printerId);
+  if (printer) {
+    data.printerKw = Number(printer.averageKw || 0);
+    data.machineCost = Number(printer.purchaseCost || 0);
+    data.machineLife = Number(printer.lifeHours || 1);
+    applyPrinterToForm(document.querySelector("#pricing-form"), printer);
+  }
   const costPerGram = filament ? getCostPerGram(filament) : 0;
   const materialCost = filament ? data.grams * costPerGram : 0;
   const energyCost = data.hours * data.printerKw * data.kwhCost;
@@ -1005,7 +1250,7 @@ function calculatePricing() {
   document.querySelector("#breakdown").innerHTML = `
     <div><span>Material</span><strong>${currency.format(materialCost)}</strong></div>
     <div><span>Energia</span><strong>${currency.format(energyCost)}</strong></div>
-    <div><span>Depreciação A1</span><strong>${currency.format(depreciationCost)}</strong></div>
+    <div><span>Depreciação ${escapeHtml(printer?.name || "impressora")}</span><strong>${currency.format(depreciationCost)}</strong></div>
     <div><span>Embalagem + mão de obra</span><strong>${currency.format(data.packaging + data.labor)}</strong></div>
     <div><span>Falhas/perdas</span><strong>${currency.format(failureCost)}</strong></div>
   `;
@@ -1016,6 +1261,8 @@ function calculatePricing() {
       <div><span>Custo médio do filamento</span><strong>${currency.format(costPerGram)}/g</strong></div>
       <div><span>Custo médio por kg</span><strong>${currency.format(costPerGram * 1000)}/kg</strong></div>
       <div><span>Conta do material</span><strong>${grams.format(data.grams)}g × ${currency.format(costPerGram)}/g</strong></div>
+      <div><span>Impressora usada</span><strong>${escapeHtml(printer?.name || "Não informada")}</strong></div>
+      <div><span>Depreciação por hora</span><strong>${currency.format(getPrinterDepreciationPerHour(printer))}/h</strong></div>
     `
     : "";
 
@@ -1030,7 +1277,7 @@ function readSmartPricingForm() {
 
   const data = Object.fromEntries(new FormData(form).entries());
   for (const key of Object.keys(data)) {
-    if (!["productName", "filamentId", "marketplace", "mode"].includes(key)) {
+    if (!["productName", "filamentId", "printerId", "marketplace", "mode"].includes(key)) {
       data[key] = Number(data[key] || 0);
     }
   }
@@ -1044,6 +1291,13 @@ function calculateSmartPricing() {
   if (!engine || !data) return;
 
   const filament = filaments.find((item) => item.id === data.filamentId) || filaments[0];
+  const printer = getSelectedPrinter(data.printerId);
+  if (printer) {
+    data.printerKw = Number(printer.averageKw || 0);
+    data.machineCost = Number(printer.purchaseCost || 0);
+    data.machineLifeHours = Number(printer.lifeHours || 1);
+    applyPrinterToForm(document.querySelector("#smart-pricing-form"), printer);
+  }
   const marketplace = MARKETPLACE_PRESETS[data.marketplace] || MARKETPLACE_PRESETS.lojaPropria;
   if (!filament) {
     document.querySelector("#smart-suggested-price").textContent = "R$ 0,00";
@@ -1115,6 +1369,8 @@ function calculateSmartPricing() {
     <div><span>Tempo mÃ©dio por oferta</span><strong>${result.production.averageTimeHoursPerOffer.toFixed(2)}h</strong></div>
     <div><span>Material total</span><strong>${currency.format(result.production.materialCost)}</strong></div>
     <div><span>Energia + depreciaÃ§Ã£o</span><strong>${currency.format(result.production.energyCost + result.production.depreciationCost)}</strong></div>
+    <div><span>Impressora usada</span><strong>${escapeHtml(printer?.name || "Não informada")}</strong></div>
+    <div><span>Depreciação por hora</span><strong>${currency.format(getPrinterDepreciationPerHour(printer))}/h</strong></div>
     <div><span>Embalagem + mÃ£o de obra</span><strong>${currency.format(result.production.packagingCostPerOffer + result.production.laborCostPerOffer)}</strong></div>
   `;
   normalizeVisibleText();
@@ -1126,7 +1382,9 @@ function renderAll() {
   renderDashboard();
   renderSpools();
   renderTable();
+  renderPrinterTable();
   renderFilamentOptions();
+  renderPrinterOptions();
   renderMarketplaceOptions();
   calculatePricing();
   calculateSmartPricing();
@@ -1170,6 +1428,31 @@ document.querySelector("#filament-table").addEventListener("click", (event) => {
   if (!button) return;
 
   removeFilament(button.dataset.remove);
+});
+
+document.querySelector("#printer-form")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+
+  printers.push({
+    id: crypto.randomUUID(),
+    name: data.name.trim(),
+    model: data.model.trim(),
+    purchaseCost: Number(data.purchaseCost || 0),
+    lifeHours: Math.max(1, Number(data.lifeHours || 1)),
+    averageKw: Number(data.averageKw || 0)
+  });
+
+  event.currentTarget.reset();
+  savePrinters();
+  renderAll();
+});
+
+document.querySelector("#printer-table")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-remove-printer]");
+  if (!button) return;
+
+  removePrinter(button.dataset.removePrinter);
 });
 
 document.querySelector("#stock-alerts").addEventListener("click", (event) => {
@@ -1271,6 +1554,7 @@ document.querySelector("#spool-grid").addEventListener("click", (event) => {
 });
 
 document.querySelector("#pricing-form").addEventListener("input", calculatePricing);
+document.querySelector("#pricing-form").addEventListener("change", calculatePricing);
 
 document.querySelector("#smart-pricing-form")?.addEventListener("input", calculateSmartPricing);
 document.querySelector("#smart-pricing-form")?.addEventListener("change", calculateSmartPricing);
@@ -1353,7 +1637,9 @@ document.querySelector("#logout-button").addEventListener("click", async () => {
   currentUser = null;
   currentProfile = null;
   filaments = [];
+  printers = [];
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(PRINTER_STORAGE_KEY);
   renderUserState();
   showAuthScreen();
 });

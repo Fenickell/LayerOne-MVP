@@ -212,6 +212,45 @@
             </div>
           </div>
         </div>
+
+        <div class="workspace two-columns">
+          <form class="form-panel" id="printer-form">
+            <div class="section-title">
+              <h2>Cadastrar impressora</h2>
+              <span>Valor, vida útil e consumo para calcular depreciação</span>
+            </div>
+            <div class="form-grid">
+              <label>Nome da impressora<input required name="name" placeholder="Bambu Lab A1"></label>
+              <label>Modelo<input required name="model" placeholder="A1, Snapmaker, H2D"></label>
+              <label>Valor pago (R$)<input required min="0" step="0.01" name="purchaseCost" type="number" value="2500"></label>
+              <label>Vida útil estimada (h)<input required min="1" step="1" name="lifeHours" type="number" value="3000"></label>
+              <label>Consumo médio (kW)<input required min="0" step="0.01" name="averageKw" type="number" value="0.12"></label>
+            </div>
+            <button class="primary-button" type="submit">Salvar impressora</button>
+          </form>
+
+          <div class="table-panel">
+            <div class="section-title">
+              <h2>Impressoras cadastradas</h2>
+              <span>Depreciação automática por hora</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Impressora</th>
+                    <th>Valor</th>
+                    <th>Vida útil</th>
+                    <th>Consumo</th>
+                    <th>Depreciação</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="printer-table"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section class="tab-panel" id="calculadora">
@@ -224,12 +263,13 @@
             <div class="form-grid">
               <label>Produto<input name="productName" value="Chaveiro articulado"></label>
               <label>Filamento<select name="filamentId" id="filament-select"></select></label>
+              <label>Impressora usada<select name="printerId" id="printer-select"></select></label>
               <label>Consumo (g)<input name="grams" min="0" step="0.1" type="number" value="38"></label>
               <label>Tempo (h)<input name="hours" min="0" step="0.1" type="number" value="3.5"></label>
               <label>kWh local (R$)<input name="kwhCost" min="0" step="0.01" type="number" value="0.95"></label>
-              <label>Consumo médio (kW)<input name="printerKw" min="0" step="0.01" type="number" value="0.12"></label>
-              <label>Valor Bambulab A1 (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500"></label>
-              <label>Vida util estimada (h)<input name="machineLife" min="1" step="1" type="number" value="3000"></label>
+              <label>Consumo médio da impressora (kW)<input name="printerKw" min="0" step="0.01" type="number" value="0.12" readonly></label>
+              <label>Valor da impressora (R$)<input name="machineCost" min="0" step="0.01" type="number" value="2500" readonly></label>
+              <label>Vida útil estimada (h)<input name="machineLife" min="1" step="1" type="number" value="3000" readonly></label>
               <label>Falhas/perdas (%)<input name="failureRate" min="0" step="0.1" type="number" value="8"></label>
               <label>Embalagem (R$)<input name="packaging" min="0" step="0.01" type="number" value="1.2"></label>
               <label>Acabamento/Mão de obra (R$)<input name="labor" min="0" step="0.01" type="number" value="4"></label>
