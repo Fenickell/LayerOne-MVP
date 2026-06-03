@@ -163,8 +163,14 @@
 
       <section class="tab-panel" id="visual">
         <div class="section-title">
-          <h2>Rolos de filamento</h2>
-              <span>Medidor visual por rolo, fornecedor e saldo restante</span>
+          <div>
+            <h2>Rolos de filamento</h2>
+            <span>Medidor visual por rolo ou agrupado por especificação</span>
+          </div>
+          <div class="view-toggle" role="group" aria-label="Visualização do estoque">
+            <button class="active" data-stock-view="rolls" type="button">Por rolo</button>
+            <button data-stock-view="grouped" type="button">Agrupado</button>
+          </div>
         </div>
         <div class="spool-grid" id="spool-grid"></div>
       </section>

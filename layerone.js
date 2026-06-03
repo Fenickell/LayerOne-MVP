@@ -1,6 +1,7 @@
 const STORAGE_KEY = "layerone-mvp-filaments";
 const PRINTER_STORAGE_KEY = "layerone-mvp-printers";
 const THEME_KEY = "layerone-mvp-theme";
+const STOCK_VIEW_KEY = "layerone-mvp-stock-view";
 const SUPABASE_TABLE = "layerone_filaments";
 const PRINTER_TABLE = "layerone_printers";
 const PROFILE_TABLE = "layerone_profiles";
@@ -97,6 +98,7 @@ const demoPrinters = [
 let filaments = loadFilaments();
 let printers = loadPrinters();
 let currentTheme = loadTheme();
+let stockViewMode = loadStockViewMode();
 let appConfig = null;
 let currentUser = null;
 let currentProfile = null;
@@ -665,6 +667,24 @@ function loadTheme() {
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+function loadStockViewMode() {
+  const stored = localStorage.getItem(STOCK_VIEW_KEY);
+  return stored === "grouped" ? "grouped" : "rolls";
+}
+
+function setStockViewMode(mode) {
+  stockViewMode = mode === "grouped" ? "grouped" : "rolls";
+  localStorage.setItem(STOCK_VIEW_KEY, stockViewMode);
+  renderStockViewToggle();
+  renderSpools();
+}
+
+function renderStockViewToggle() {
+  document.querySelectorAll("[data-stock-view]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.stockView === stockViewMode);
+  });
+}
+
 function applyTheme(theme) {
   currentTheme = theme;
   document.body.dataset.theme = theme;
@@ -744,6 +764,59 @@ function getStatus(filament) {
 
 function getFilamentLabel(item) {
   return `${item.type} ${item.colorName} - ${item.brand} (${item.supplier || "sem fornecedor"})`;
+}
+
+function getFilamentGroupKey(item) {
+  return [
+    item.type,
+    item.colorName,
+    item.colorHex,
+    item.brand,
+    item.supplier || ""
+  ]
+    .map((value) => String(value || "").trim().toLowerCase())
+    .join("|");
+}
+
+function getGroupedFilaments() {
+  const groups = new Map();
+
+  filaments.forEach((item) => {
+    const key = getFilamentGroupKey(item);
+    const costPerGram = getCostPerGram(item);
+    const currentWeight = Number(item.currentWeight || 0);
+    const stockValue = Number(item.stockValue || currentWeight * costPerGram);
+    const existing = groups.get(key);
+
+    if (!existing) {
+      groups.set(key, {
+        id: key,
+        brand: item.brand,
+        supplier: item.supplier,
+        type: item.type,
+        colorName: item.colorName,
+        colorHex: item.colorHex,
+        initialWeight: Number(item.initialWeight || 0),
+        currentWeight,
+        stockValue,
+        minAlert: Number(item.minAlert || 0),
+        rolls: [item]
+      });
+      return;
+    }
+
+    existing.initialWeight += Number(item.initialWeight || 0);
+    existing.currentWeight += currentWeight;
+    existing.stockValue += stockValue;
+    existing.minAlert += Number(item.minAlert || 0);
+    existing.rolls.push(item);
+  });
+
+  return [...groups.values()].map((group) => ({
+    ...group,
+    avgCostPerGram: group.currentWeight > 0 ? group.stockValue / group.currentWeight : 0,
+    rollCost: group.currentWeight > 0 ? (group.stockValue / group.currentWeight) * 1000 : 0
+  }));
 }
 
 function getPrinterLabel(item) {
@@ -874,7 +947,7 @@ function renderDashboard() {
   document.querySelector("#stock-alerts").innerHTML = alerts || "<p>Nenhum filamento cadastrado.</p>";
 }
 
-function renderSpools() {
+function renderRollSpoolsLegacy() {
   const html = filaments
     .map((item) => {
       const percent = getRemainingPercent(item);
@@ -929,6 +1002,71 @@ function renderSpools() {
     .join("");
 
   document.querySelector("#spool-grid").innerHTML = html || "<p>Nenhum filamento cadastrado.</p>";
+}
+
+function renderGroupedSpoolCard(group) {
+  const percent = getRemainingPercent(group);
+  const usedRatio = Math.max(0, Math.min(1, (100 - percent) / 100));
+  const status = getStatus(group);
+  const colorHex = safeHexColor(group.colorHex);
+  const title = escapeHtml(`${group.type} ${group.colorName}`);
+  const brand = escapeHtml(group.brand);
+  const supplier = escapeHtml(group.supplier || "Fornecedor não informado");
+  const rollRows = group.rolls
+    .map((roll, index) => `
+      <li>
+        <span>Rolo ${index + 1}</span>
+        <strong>${formatStock(roll.currentWeight)} / ${formatStock(roll.initialWeight)}</strong>
+      </li>
+    `)
+    .join("");
+
+  return `
+    <article class="spool-card grouped-spool-card">
+      <header>
+        <div>
+          <h3>${title}</h3>
+          <p>${brand} - ${supplier}</p>
+        </div>
+        <span class="status ${status.className}">${status.label}</span>
+      </header>
+      <div class="stock-meter vertical-meter" style="--filament-color:${colorHex}; --stock-percent:${percent.toFixed(0)}%; --used-ratio:${usedRatio.toFixed(2)}" aria-label="${percent.toFixed(0)}% restante">
+        <div class="vertical-spool">
+          <span class="spool-side left"></span>
+          <span class="spool-side right"></span>
+          <span class="vertical-fill"></span>
+          <span class="vertical-lines"></span>
+          <span class="vertical-empty"></span>
+          <span class="stock-meter-label"><span class="percent-line">${percent.toFixed(0)}<small>%</small></span><em>saldo agrupado</em></span>
+        </div>
+      </div>
+      <div class="spool-stats">
+        <div><span>Total agrupado</span><strong>${formatStock(group.currentWeight)}</strong></div>
+        <div><span>Rolos no grupo</span><strong>${group.rolls.length}</strong></div>
+        <div><span>Custo médio/g</span><strong>${currency.format(getCostPerGram(group))}</strong></div>
+        <div><span>Valor em estoque</span><strong>${currency.format(Number(group.stockValue || 0))}</strong></div>
+      </div>
+      <details class="group-rolls">
+        <summary>Ver rolos individuais</summary>
+        <ul>${rollRows}</ul>
+      </details>
+    </article>
+  `;
+}
+
+function renderGroupedSpools() {
+  const html = getGroupedFilaments().map(renderGroupedSpoolCard).join("");
+  document.querySelector("#spool-grid").innerHTML = html || "<p>Nenhum filamento cadastrado.</p>";
+}
+
+function renderSpools() {
+  renderStockViewToggle();
+  if (stockViewMode === "grouped") {
+    renderGroupedSpools();
+    return;
+  }
+
+  renderRollSpoolsLegacy();
 }
 
 function renderTable() {
@@ -1398,6 +1536,10 @@ document.querySelectorAll(".tab").forEach((tab) => {
 
 document.querySelectorAll("[data-open-tab]").forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.openTab));
+});
+
+document.querySelectorAll("[data-stock-view]").forEach((button) => {
+  button.addEventListener("click", () => setStockViewMode(button.dataset.stockView));
 });
 
 document.querySelector("#filament-form").addEventListener("submit", (event) => {
