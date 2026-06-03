@@ -997,12 +997,10 @@ function renderRollSpoolsLegacy() {
           </div>
           <div class="quick-card-actions" data-card-actions="${id}">
             <div class="quick-inputs">
-              <input aria-label="Quantidade para movimentar" min="0" step="0.1" type="number" value="50">
-              <input aria-label="Custo da entrada" min="0" step="0.01" type="number" placeholder="R$ entrada">
+              <input aria-label="Gramas usadas" min="0" step="0.1" type="number" value="50" placeholder="g usados">
             </div>
             <div class="quick-buttons">
               <button class="secondary-button" data-stock-action="use" type="button">Usar</button>
-              <button class="primary-button" data-stock-action="add" type="button">Entrada</button>
               <button class="danger-button" data-stock-action="remove" type="button">Acabou</button>
             </div>
           </div>
@@ -1727,7 +1725,6 @@ document.querySelector("#spool-grid").addEventListener("click", (event) => {
   const filamentId = actionWrap?.dataset.cardActions;
   const inputs = actionWrap?.querySelectorAll("input");
   const amount = Number(inputs?.[0]?.value || 0);
-  const entryCost = Number(inputs?.[1]?.value || 0);
   const action = button.dataset.stockAction;
 
   if (action === "remove") {
@@ -1736,7 +1733,7 @@ document.querySelector("#spool-grid").addEventListener("click", (event) => {
   }
 
   if (!filamentId || amount <= 0) return;
-  changeFilamentStock(filamentId, amount, action, entryCost);
+  changeFilamentStock(filamentId, amount, action);
 });
 
 document.querySelector("#pricing-form").addEventListener("input", calculatePricing);
