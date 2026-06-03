@@ -692,7 +692,8 @@ function applyTheme(theme) {
 
   const button = document.querySelector("#theme-toggle");
   if (button) {
-    button.textContent = theme === "dark" ? "Claro" : "Escuro";
+    const label = button.querySelector(".theme-label");
+    if (label) label.textContent = theme === "dark" ? "Dark" : "Light";
     button.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
   }
 }

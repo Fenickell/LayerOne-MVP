@@ -585,24 +585,112 @@ body[data-theme="dark"] .tab.active {
   align-items: center;
   -webkit-backdrop-filter: var(--blur);
   backdrop-filter: var(--blur);
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at 28px 50%, rgba(255, 255, 255, 0.42), transparent 38px),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.16)),
+    var(--surface);
+  border: 1px solid var(--glass-line);
   border-radius: 999px;
   color: var(--ink);
   cursor: pointer;
   display: inline-flex;
-  font-size: 12px;
-  font-weight: 800;
-  height: 34px;
-  justify-content: center;
-  min-width: 66px;
-  padding: 0 12px;
-  transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+  font-size: 14px;
+  font-weight: 850;
+  gap: 10px;
+  height: 54px;
+  justify-content: flex-start;
+  min-width: 142px;
+  overflow: hidden;
+  padding: 6px 18px 6px 6px;
+  position: relative;
+  transition: background 200ms ease, border-color 200ms ease, color 200ms ease, transform 160ms ease, box-shadow 200ms ease;
+}
+
+.theme-button::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  content: "";
+  height: 1px;
+  left: 18px;
+  position: absolute;
+  right: 18px;
+  top: 1px;
 }
 
 .theme-button:hover {
   border-color: var(--accent);
+  box-shadow: var(--shadow-glow), inset 0 1px 0 var(--glass-highlight);
   transform: translateY(-1px);
+}
+
+.theme-orb {
+  align-items: center;
+  background:
+    radial-gradient(circle at 35% 32%, rgba(255, 255, 255, 0.92), transparent 28px),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.18));
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 50%;
+  box-shadow: 0 12px 28px rgba(31, 41, 55, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 42px;
+  justify-content: center;
+  position: relative;
+  transition: transform 220ms ease, background 220ms ease;
+  width: 42px;
+  z-index: 1;
+}
+
+.theme-icon {
+  font-size: 18px;
+  line-height: 1;
+  position: absolute;
+  transition: opacity 180ms ease, transform 220ms ease;
+}
+
+.theme-sun {
+  color: #f7b955;
+  opacity: 1;
+}
+
+.theme-moon {
+  color: #d8e3ff;
+  opacity: 0;
+  transform: translateY(8px) rotate(-18deg);
+}
+
+.theme-label {
+  min-width: 38px;
+  position: relative;
+  text-align: left;
+  z-index: 1;
+}
+
+body[data-theme="dark"] .theme-button {
+  background:
+    radial-gradient(circle at calc(100% - 28px) 50%, rgba(127, 153, 255, 0.32), transparent 42px),
+    linear-gradient(135deg, rgba(18, 24, 34, 0.92), rgba(32, 41, 58, 0.66));
+  color: #f5f7fb;
+  padding-left: 18px;
+  padding-right: 6px;
+}
+
+body[data-theme="dark"] .theme-orb {
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.32), transparent 26px),
+    linear-gradient(145deg, rgba(80, 93, 125, 0.82), rgba(12, 17, 27, 0.9));
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  order: 2;
+}
+
+body[data-theme="dark"] .theme-sun {
+  opacity: 0;
+  transform: translateY(-8px) rotate(18deg);
+}
+
+body[data-theme="dark"] .theme-moon {
+  opacity: 1;
+  transform: translateY(0) rotate(0);
 }
 
 .user-pill {
