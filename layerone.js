@@ -8,6 +8,24 @@ const PROFILE_TABLE = "layerone_profiles";
 const CONFIG_PLACEHOLDER = "COLE_SUA_URL_AQUI";
 const TRIAL_DAYS = 7;
 const MARKETPLACE_PRESETS = window.LayerOnePricingEngine?.MARKETPLACE_PRESETS || {};
+const MARKETPLACE_GUIDES = {
+  shopee: {
+    description: "A Shopee combina comissão percentual e taxa fixa por oferta. Em produtos baratos, a taxa fixa pode representar uma parcela grande da venda.",
+    notice: "As regras podem variar por perfil, campanhas, forma de pagamento e condições da conta. Confira o extrato da sua conta de vendedor antes de publicar o preço."
+  },
+  mercadoLivre: {
+    description: "O Mercado Livre varia a tarifa conforme categoria, tipo de anúncio e preço. O preset atual é uma referência inicial para simulação.",
+    notice: "Antes de vender, confira a tarifa exibida no próprio anúncio. Clássico, Premium, categoria e custos de envio podem alterar o resultado."
+  },
+  lojaPropria: {
+    description: "Use este canal para vendas sem comissão de marketplace. Inclua manualmente gateway, frete subsidiado ou outros custos quando existirem.",
+    notice: "Venda direta não significa custo zero: considere pagamento, embalagem, anúncio, entrega e impostos quando forem aplicáveis."
+  },
+  b2bDireto: {
+    description: "Use para vendas diretas a lojistas ou distribuidores, normalmente sem taxa fixa de marketplace.",
+    notice: "No B2B, valide quantidade mínima, desconto comercial, prazo de pagamento e custo logístico antes de fechar a margem."
+  }
+};
 
 const demoFilaments = [
   {
@@ -108,6 +126,7 @@ let isCloudReady = false;
 let isHydratingCloud = false;
 let isUserScopedStorage = false;
 let isPrinterCloudReady = true;
+let selectedMarketplaceGuide = "shopee";
 
 const currency = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -1201,6 +1220,103 @@ function renderMarketplaceOptions() {
   }
 }
 
+function getMarketplaceGuide(id) {
+  return MARKETPLACE_PRESETS[id] || MARKETPLACE_PRESETS.shopee || Object.values(MARKETPLACE_PRESETS)[0];
+}
+
+function getMarketplaceGuideCopy(id) {
+  return MARKETPLACE_GUIDES[id] || {
+    description: "Confira as taxas deste canal antes de definir o preço final.",
+    notice: "Marketplaces podem alterar regras por categoria, perfil e campanha."
+  };
+}
+
+function renderMarketplaceGuideRules(marketplace) {
+  const rules = document.querySelector("#marketplace-guide-rules");
+  if (!rules || !marketplace) return;
+
+  if (marketplace.feeModel === "tiered") {
+    rules.innerHTML = `
+      <div class="marketplace-rule-table">
+        <div class="marketplace-rule-row marketplace-rule-labels"><span>Faixa da venda</span><span>Comissão</span><span>Taxa fixa</span></div>
+        ${(marketplace.tiers || []).map((tier) => `
+          <div class="marketplace-rule-row">
+            <strong>${escapeHtml(tier.label)}</strong>
+            <span>${decimal.format(Number(tier.percent || 0))}%</span>
+            <span>${currency.format(Number(tier.fixed || 0))}</span>
+          </div>
+        `).join("")}
+      </div>
+    `;
+    return;
+  }
+
+  rules.innerHTML = `
+    <div class="marketplace-flat-rules">
+      <article><span>Comissão de referência</span><strong>${decimal.format(Number(marketplace.percent || 0))}%</strong></article>
+      <article><span>Taxa fixa por oferta</span><strong>${currency.format(Number(marketplace.fixed || 0))}</strong></article>
+    </div>
+  `;
+}
+
+function updateMarketplaceSimulator() {
+  const engine = window.LayerOnePricingEngine;
+  const marketplace = getMarketplaceGuide(selectedMarketplaceGuide);
+  const priceInput = document.querySelector("#marketplace-simulator-price");
+  if (!engine || !marketplace || !priceInput) return;
+
+  const price = Math.max(0, Number(priceInput.value || 0));
+  const fee = engine.calculateMarketplaceFee(marketplace, price);
+  const netBeforeProduction = Math.max(0, price - fee.totalFee);
+  const effectiveRate = Math.min(100, Number(fee.effectivePercent || 0));
+
+  document.querySelector("#marketplace-simulator-percent").textContent = currency.format(fee.percentageFee);
+  document.querySelector("#marketplace-simulator-fixed").textContent = currency.format(fee.fixedFee);
+  document.querySelector("#marketplace-simulator-total").textContent = currency.format(fee.totalFee);
+  document.querySelector("#marketplace-simulator-net").textContent = currency.format(netBeforeProduction);
+  document.querySelector("#marketplace-simulator-effective").textContent = `${decimal.format(fee.effectivePercent)}%`;
+  document.querySelector("#marketplace-effective-bar").style.width = `${effectiveRate}%`;
+
+  const tip = document.querySelector("#marketplace-simulator-tip");
+  if (!tip) return;
+
+  if (fee.fixedFee > 0 && fee.effectivePercent >= 30) {
+    tip.innerHTML = `<strong>Atenção ao ticket baixo.</strong><span>A taxa fixa está pesando bastante nesta venda. Avalie vender em kit para diluir esse valor.</span>`;
+  } else if (fee.fixedFee > 0) {
+    tip.innerHTML = `<strong>Taxa fixa por oferta.</strong><span>Um kit paga essa taxa uma vez, enquanto vendas separadas pagam uma vez por pedido.</span>`;
+  } else if (fee.totalFee > 0) {
+    tip.innerHTML = `<strong>Desconto percentual.</strong><span>Quanto maior o preço, maior o valor absoluto da comissão descontada.</span>`;
+  } else {
+    tip.innerHTML = `<strong>Sem taxa automática.</strong><span>Inclua custos de pagamento, entrega ou negociação nos campos extras da precificação.</span>`;
+  }
+}
+
+function renderMarketplaceGuide() {
+  const selector = document.querySelector("#marketplace-guide-selector");
+  const marketplace = getMarketplaceGuide(selectedMarketplaceGuide);
+  if (!selector || !marketplace) return;
+
+  selector.innerHTML = Object.values(MARKETPLACE_PRESETS).map((item) => `
+    <button class="marketplace-selector-button${item.id === marketplace.id ? " active" : ""}" data-marketplace-guide="${escapeHtml(item.id)}" role="tab" aria-selected="${item.id === marketplace.id}" type="button">
+      <span>${escapeHtml(item.name.slice(0, 2).toUpperCase())}</span>
+      <strong>${escapeHtml(item.name)}</strong>
+      <small>${item.feeModel === "tiered" ? "Por faixas" : `${decimal.format(Number(item.percent || 0))}% base`}</small>
+    </button>
+  `).join("");
+
+  const guide = getMarketplaceGuideCopy(marketplace.id);
+  document.querySelector("#marketplace-guide-badge").textContent = marketplace.feeModel === "tiered" ? "Regra por faixa" : "Regra base";
+  document.querySelector("#marketplace-guide-title").textContent = marketplace.name;
+  document.querySelector("#marketplace-guide-description").textContent = guide.description;
+  document.querySelector("#marketplace-guide-updated").textContent = marketplace.validatedAt
+    ? `Preset revisado em ${marketplace.validatedAt.split("-").reverse().join("/")}`
+    : "Preset de referência";
+  document.querySelector("#marketplace-guide-notice").innerHTML = `<strong>Importante</strong><span>${escapeHtml(guide.notice)}</span>`;
+
+  renderMarketplaceGuideRules(marketplace);
+  updateMarketplaceSimulator();
+}
+
 function normalizeVisibleText() {
   document.querySelector('[data-tab="dashboard"]') && (document.querySelector('[data-tab="dashboard"]').textContent = "Início");
   document.querySelector('[data-tab="calculadora"]') && (document.querySelector('[data-tab="calculadora"]').textContent = "Cálculo simples");
@@ -1273,6 +1389,14 @@ function renderSmartPricingShell() {
     <div class="section-title">
       <h2>Precificação inteligente</h2>
       <span>Custo real, lote, marketplace e margem em uma leitura</span>
+    </div>
+
+    <div class="pricing-help-callout">
+      <div>
+        <strong>É sua primeira precificação?</strong>
+        <span>Entenda taxas, peça unitária, kit e plate antes de preencher.</span>
+      </div>
+      <button class="secondary-button" data-open-tab="marketplaces" type="button">Ver guia de custos</button>
     </div>
 
     <div class="smart-card">
@@ -1547,6 +1671,16 @@ document.querySelectorAll("[data-open-tab]").forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.openTab));
 });
 
+document.querySelector("#marketplace-guide-selector")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-marketplace-guide]");
+  if (!button || !MARKETPLACE_PRESETS[button.dataset.marketplaceGuide]) return;
+
+  selectedMarketplaceGuide = button.dataset.marketplaceGuide;
+  renderMarketplaceGuide();
+});
+
+document.querySelector("#marketplace-simulator-price")?.addEventListener("input", updateMarketplaceSimulator);
+
 document.querySelectorAll("[data-stock-view]").forEach((button) => {
   button.addEventListener("click", () => setStockViewMode(button.dataset.stockView));
 });
@@ -1742,6 +1876,10 @@ document.querySelector("#pricing-form").addEventListener("change", calculatePric
 
 document.querySelector("#smart-pricing-form")?.addEventListener("input", calculateSmartPricing);
 document.querySelector("#smart-pricing-form")?.addEventListener("change", calculateSmartPricing);
+document.querySelector("#smart-pricing-form")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-open-tab]");
+  if (button) setActiveTab(button.dataset.openTab);
+});
 
 document.querySelector("#consume-stock").addEventListener("click", () => {
   const data = readPricingForm();
@@ -1829,6 +1967,7 @@ document.querySelector("#logout-button").addEventListener("click", async () => {
 });
 
 renderSmartPricingShell();
+renderMarketplaceGuide();
 normalizeVisibleText();
 syncColorPresetState();
 applyTheme(currentTheme);

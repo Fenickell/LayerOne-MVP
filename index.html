@@ -48,6 +48,7 @@
         <span class="sidebar-section">Precificação</span>
         <button class="tab sidebar-tab" data-tab="calculadora" type="button"><span class="sidebar-icon" aria-hidden="true">∑</span><span>Cálculo simples</span></button>
         <button class="tab sidebar-tab" data-tab="inteligente" type="button"><span class="sidebar-icon" aria-hidden="true">↗</span><span>Preço inteligente</span></button>
+        <button class="tab sidebar-tab" data-tab="marketplaces" type="button"><span class="sidebar-icon" aria-hidden="true">%</span><span>Custos marketplace</span></button>
       </nav>
       <div class="sidebar-user">
         <span class="sidebar-avatar" aria-hidden="true">L1</span>
@@ -85,6 +86,7 @@
       <button class="tab" data-tab="insumos" type="button">Insumos</button>
       <button class="tab" data-tab="calculadora" type="button">Calculadora</button>
       <button class="tab" data-tab="inteligente" type="button">PrecificaÃ§Ã£o inteligente</button>
+      <button class="tab" data-tab="marketplaces" type="button">Custos marketplace</button>
     </nav>
 
     <main>
@@ -410,6 +412,128 @@
           </aside>
         </div>
       </section>
+
+      <section class="tab-panel" id="marketplaces">
+        <div class="marketplace-hub">
+          <header class="marketplace-hero">
+            <div>
+              <span class="marketplace-kicker">Central de entendimento</span>
+              <h2>Custos marketplace</h2>
+              <p>Entenda o que cada canal desconta e como informar sua produção antes de calcular o preço.</p>
+            </div>
+            <button class="primary-button" data-open-tab="inteligente" type="button">Abrir preço inteligente</button>
+          </header>
+
+          <div class="marketplace-layout">
+            <section class="marketplace-main">
+              <div class="marketplace-section-heading">
+                <div>
+                  <span class="marketplace-step">1</span>
+                  <h3>Escolha onde pretende vender</h3>
+                </div>
+                <p>As regras abaixo são as mesmas utilizadas pelo motor de cálculo.</p>
+              </div>
+
+              <div class="marketplace-selector" id="marketplace-guide-selector" role="tablist" aria-label="Marketplaces disponíveis"></div>
+
+              <article class="marketplace-rule-panel">
+                <div class="marketplace-rule-header">
+                  <div>
+                    <span class="marketplace-badge" id="marketplace-guide-badge">Marketplace</span>
+                    <h3 id="marketplace-guide-title">Selecione um marketplace</h3>
+                    <p id="marketplace-guide-description"></p>
+                  </div>
+                  <span class="marketplace-updated" id="marketplace-guide-updated"></span>
+                </div>
+                <div class="marketplace-rules" id="marketplace-guide-rules"></div>
+                <div class="marketplace-notice" id="marketplace-guide-notice"></div>
+              </article>
+
+              <section class="production-guide">
+                <div class="marketplace-section-heading">
+                  <div>
+                    <span class="marketplace-step">2</span>
+                    <h3>Defina o que está sendo produzido e vendido</h3>
+                  </div>
+                  <p>Essa decisão determina como peso, tempo e taxa fixa serão divididos.</p>
+                </div>
+
+                <div class="production-guide-grid">
+                  <article class="production-guide-card">
+                    <span class="production-guide-icon" aria-hidden="true">1</span>
+                    <h4>Peça unitária</h4>
+                    <p>Uma peça é impressa e vendida sozinha.</p>
+                    <dl>
+                      <div><dt>Peças na impressão</dt><dd>1</dd></div>
+                      <div><dt>Peças por oferta</dt><dd>1</dd></div>
+                      <div><dt>Informe</dt><dd>peso e tempo da peça</dd></div>
+                    </dl>
+                  </article>
+
+                  <article class="production-guide-card">
+                    <span class="production-guide-icon" aria-hidden="true">KIT</span>
+                    <h4>Kit / oferta</h4>
+                    <p>O cliente compra várias peças em uma única oferta.</p>
+                    <dl>
+                      <div><dt>Exemplo</dt><dd>kit com 3 chaveiros</dd></div>
+                      <div><dt>Peças por oferta</dt><dd>3</dd></div>
+                      <div><dt>Taxa fixa</dt><dd>entra uma vez por kit</dd></div>
+                    </dl>
+                  </article>
+
+                  <article class="production-guide-card featured">
+                    <span class="production-guide-icon" aria-hidden="true">PL</span>
+                    <h4>Plate / lote</h4>
+                    <p>Várias peças saem juntas e o custo total é rateado.</p>
+                    <dl>
+                      <div><dt>Peças na impressão</dt><dd>total da plate</dd></div>
+                      <div><dt>Peso usado</dt><dd>peso total da plate</dd></div>
+                      <div><dt>Tempo informado</dt><dd>tempo total da plate</dd></div>
+                    </dl>
+                  </article>
+                </div>
+              </section>
+            </section>
+
+            <aside class="marketplace-simulator">
+              <div class="marketplace-section-heading compact">
+                <div>
+                  <span class="marketplace-step">3</span>
+                  <h3>Simule o desconto</h3>
+                </div>
+                <p>Veja quanto sobra antes dos custos de produção.</p>
+              </div>
+
+              <label class="marketplace-price-input">
+                Preço de venda
+                <span><small>R$</small><input id="marketplace-simulator-price" min="0" step="0.01" type="number" value="29.90"></span>
+              </label>
+
+              <div class="marketplace-simulator-result">
+                <div><span>Comissão percentual</span><strong id="marketplace-simulator-percent">R$ 0,00</strong></div>
+                <div><span>Taxa fixa</span><strong id="marketplace-simulator-fixed">R$ 0,00</strong></div>
+                <div class="marketplace-simulator-total"><span>Total descontado</span><strong id="marketplace-simulator-total">R$ 0,00</strong></div>
+                <div class="marketplace-simulator-net"><span>Recebimento antes da produção</span><strong id="marketplace-simulator-net">R$ 0,00</strong></div>
+              </div>
+
+              <div class="marketplace-effective-rate">
+                <span>Taxa efetiva desta venda</span>
+                <strong id="marketplace-simulator-effective">0%</strong>
+                <div><span id="marketplace-effective-bar"></span></div>
+              </div>
+
+              <div class="marketplace-tip" id="marketplace-simulator-tip"></div>
+
+              <div class="marketplace-checklist">
+                <h4>Antes de precificar</h4>
+                <label><input checked disabled type="checkbox"> Confira se é unitário, kit ou plate</label>
+                <label><input checked disabled type="checkbox"> Informe peso e tempo totais da impressão</label>
+                <label><input checked disabled type="checkbox"> Revise a regra na sua conta do marketplace</label>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
     </main>
 
     <nav class="mobile-tabbar" aria-label="Abas principais no rodapé">
@@ -418,6 +542,7 @@
       <button class="tab mobile-tab" data-tab="insumos" type="button"><span class="tab-icon" aria-hidden="true">＋</span><span>Insumos</span></button>
       <button class="tab mobile-tab" data-tab="calculadora" type="button"><span class="tab-icon" aria-hidden="true">∑</span><span>Cálculo</span></button>
       <button class="tab mobile-tab" data-tab="inteligente" type="button"><span class="tab-icon" aria-hidden="true">↗</span><span>Preço</span></button>
+      <button class="tab mobile-tab" data-tab="marketplaces" type="button"><span class="tab-icon" aria-hidden="true">%</span><span>Taxas</span></button>
     </nav>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

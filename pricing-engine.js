@@ -8,7 +8,7 @@
       editable: true,
       feeModel: "tiered",
       validatedAt: "2026-05",
-      notes: "Preset inicial editavel. Taxa fixa aplicada por item comercial vendido, incluindo kits.",
+      notes: "Preset inicial editável. Taxa fixa aplicada por item comercial vendido, incluindo kits.",
       tiers: [
         { label: "Abaixo de R$8", min: 0, max: 7.99, percent: 50, fixed: 0 },
         { label: "R$8 a R$79,99", min: 8, max: 79.99, percent: 20, fixed: 4 },
@@ -24,11 +24,11 @@
       feeModel: "flat",
       percent: 16,
       fixed: 0,
-      notes: "Preset generico. Ajustar por categoria, tipo de anuncio e regra vigente."
+      notes: "Preset genérico. Ajustar por categoria, tipo de anúncio e regra vigente."
     },
     lojaPropria: {
       id: "lojaPropria",
-      name: "Loja propria",
+      name: "Loja própria",
       editable: true,
       feeModel: "flat",
       percent: 0,
@@ -157,7 +157,7 @@
     if (!rule) {
       return {
         marketplaceName: marketplace.name || "Marketplace",
-        ruleLabel: "Sem regra aplicavel",
+        ruleLabel: "Sem regra aplicável",
         percentageFee: 0,
         fixedFee: 0,
         totalFee: 0,
