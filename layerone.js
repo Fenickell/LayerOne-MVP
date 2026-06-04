@@ -1318,9 +1318,28 @@ function renderMarketplaceGuide() {
 }
 
 function normalizeVisibleText() {
-  document.querySelector('[data-tab="dashboard"]') && (document.querySelector('[data-tab="dashboard"]').textContent = "Início");
-  document.querySelector('[data-tab="calculadora"]') && (document.querySelector('[data-tab="calculadora"]').textContent = "Cálculo simples");
-  document.querySelector('[data-tab="inteligente"]') && (document.querySelector('[data-tab="inteligente"]').textContent = "Preço inteligente");
+  const tabLabels = {
+    dashboard: { sidebar: "Início", mobile: "Início", top: "Visão geral" },
+    calculadora: { sidebar: "Cálculo simples", mobile: "Cálculo", top: "Calculadora" },
+    inteligente: { sidebar: "Preço inteligente", mobile: "Preço", top: "Precificação inteligente" }
+  };
+
+  Object.entries(tabLabels).forEach(([tabName, labels]) => {
+    document.querySelectorAll(`[data-tab="${tabName}"]`).forEach((tab) => {
+      const nestedLabel = tab.querySelector("span:last-child");
+      const label = tab.classList.contains("sidebar-tab")
+        ? labels.sidebar
+        : tab.classList.contains("mobile-tab")
+          ? labels.mobile
+          : labels.top;
+
+      if (nestedLabel) {
+        nestedLabel.textContent = label;
+      } else {
+        tab.textContent = label;
+      }
+    });
+  });
 
   const replacements = [
     ["GestÃ£o", "Gestão"],
