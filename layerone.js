@@ -1430,7 +1430,8 @@ function renderSmartPricingShell() {
         <label>Produto<input name="productName" value="Chaveiro articulado"></label>
         <label>Marketplace<select name="marketplace" id="smart-marketplace"></select></label>
         <label>Margem líquida desejada (%)<input name="targetNetMarginPercent" min="0" max="80" step="0.1" type="number" value="35"></label>
-        <label>Peças por kit/oferta<input name="unitsPerOffer" min="1" step="1" type="number" value="1"></label>
+        <label>Peças vendidas no kit/oferta<input name="unitsPerOffer" min="1" step="1" type="number" value="1"><span class="field-hint">Preço final é por oferta vendida, não por peça da plate.</span></label>
+        <label>Variações de kit para comparar<input name="kitVariants" type="text" value="6, 12, 20, 50"><span class="field-hint">Use os pacotes da Shopee separados por vírgula.</span></label>
       </div>
     </div>
 
@@ -1567,12 +1568,95 @@ function readSmartPricingForm() {
 
   const data = Object.fromEntries(new FormData(form).entries());
   for (const key of Object.keys(data)) {
-    if (!["productName", "filamentId", "printerId", "marketplace", "mode"].includes(key)) {
+    if (!["productName", "filamentId", "printerId", "marketplace", "mode", "kitVariants"].includes(key)) {
       data[key] = Number(data[key] || 0);
     }
   }
 
   return data;
+}
+
+function buildSmartProductionInput(data, costPerGram, unitsPerOffer = data.unitsPerOffer) {
+  return {
+    mode: data.mode,
+    physicalUnits: data.mode === "plate" ? data.physicalUnits : 1,
+    unitsPerOffer,
+    totalWeightGrams: data.totalWeightGrams,
+    totalTimeWholeHours: data.totalTimeWholeHours,
+    totalTimeMinutes: data.totalTimeMinutes,
+    filamentCostPerGram: costPerGram,
+    kwhCost: data.kwhCost,
+    printerKw: data.printerKw,
+    machineCost: data.machineCost,
+    machineLifeHours: data.machineLifeHours,
+    failureRatePercent: data.failureRatePercent,
+    packagingCostPerOffer: data.packagingCostPerOffer,
+    laborCostPerOffer: data.laborCostPerOffer,
+    extraCostPerOffer: data.extraCostPerOffer,
+    batchExtraCost: data.batchExtraCost
+  };
+}
+
+function parseKitVariants(value, currentUnitsPerOffer, physicalUnits) {
+  const variants = String(value || "")
+    .split(/[,\s;|/]+/)
+    .map((item) => Math.round(Number(item)))
+    .filter((item) => Number.isFinite(item) && item > 0);
+
+  if (Number(currentUnitsPerOffer) > 1) variants.push(Math.round(Number(currentUnitsPerOffer)));
+  if (Number(physicalUnits) > 1) variants.push(Math.round(Number(physicalUnits)));
+
+  return [...new Set(variants)].sort((a, b) => a - b).slice(0, 8);
+}
+
+function renderSmartKitVariants(engine, data, marketplace, costPerGram) {
+  const panel = document.querySelector("#smart-kit-variants");
+  if (!panel) return;
+
+  const variants = parseKitVariants(data.kitVariants, data.unitsPerOffer, data.physicalUnits);
+  if (!variants.length) {
+    panel.innerHTML = "";
+    return;
+  }
+
+  const rows = variants.map((kitSize) => {
+    const variant = engine.calculateAdvancedPricing({
+      production: buildSmartProductionInput(data, costPerGram, kitSize),
+      marketplace,
+      targetNetMarginPercent: data.targetNetMarginPercent,
+      taxPercent: 0
+    });
+    const offersPerPlate = variant.production.commercialOffers;
+    const plateReadout = data.mode === "plate"
+      ? `${decimal.format(offersPerPlate)} kit/plate`
+      : `${kitSize} peças`;
+    const isCurrent = Number(data.unitsPerOffer) === kitSize;
+
+    return `
+      <div class="kit-variant-row${isCurrent ? " active" : ""}">
+        <span>${kitSize} un.</span>
+        <span>${plateReadout}</span>
+        <strong>${currency.format(variant.production.finalCostPerOffer)}</strong>
+        <strong>${variant.suggested ? currency.format(variant.suggested.salePrice) : "Inviável"}</strong>
+      </div>
+    `;
+  }).join("");
+
+  panel.innerHTML = `
+    <div class="kit-variants-title">
+      <div>
+        <h3>Variações de kit</h3>
+        <span>Preço sugerido por pacote vendido na Shopee/marketplace.</span>
+      </div>
+    </div>
+    <div class="kit-variant-row labels">
+      <span>Pacote</span>
+      <span>Rateio</span>
+      <span>Custo</span>
+      <span>Preço</span>
+    </div>
+    ${rows}
+  `;
 }
 
 function calculateSmartPricing() {
@@ -1595,6 +1679,7 @@ function calculateSmartPricing() {
     document.querySelector("#smart-break-even").textContent = "R$ 0,00";
     document.querySelector("#smart-summary-label").textContent = "Cadastre um filamento para calcular";
     document.querySelector("#smart-warning").innerHTML = "O primeiro passo é cadastrar pelo menos um filamento. Depois disso, a precificação consegue puxar o custo médio por grama automaticamente.";
+    document.querySelector("#smart-kit-variants").innerHTML = "";
     document.querySelector("#smart-breakdown").innerHTML = "";
     document.querySelector("#smart-audit").innerHTML = "";
     normalizeVisibleText();
@@ -1602,24 +1687,7 @@ function calculateSmartPricing() {
   }
   const costPerGram = filament ? getCostPerGram(filament) : 0;
   const result = engine.calculateAdvancedPricing({
-    production: {
-      mode: data.mode,
-      physicalUnits: data.mode === "plate" ? data.physicalUnits : 1,
-      unitsPerOffer: data.unitsPerOffer,
-      totalWeightGrams: data.totalWeightGrams,
-      totalTimeWholeHours: data.totalTimeWholeHours,
-      totalTimeMinutes: data.totalTimeMinutes,
-      filamentCostPerGram: costPerGram,
-      kwhCost: data.kwhCost,
-      printerKw: data.printerKw,
-      machineCost: data.machineCost,
-      machineLifeHours: data.machineLifeHours,
-      failureRatePercent: data.failureRatePercent,
-      packagingCostPerOffer: data.packagingCostPerOffer,
-      laborCostPerOffer: data.laborCostPerOffer,
-      extraCostPerOffer: data.extraCostPerOffer,
-      batchExtraCost: data.batchExtraCost
-    },
+    production: buildSmartProductionInput(data, costPerGram),
     marketplace,
     targetNetMarginPercent: data.targetNetMarginPercent,
     taxPercent: 0
@@ -1630,7 +1698,8 @@ function calculateSmartPricing() {
   document.querySelector("#smart-suggested-price").textContent = suggested ? currency.format(suggested.salePrice) : "InviÃ¡vel";
   document.querySelector("#smart-net-profit").textContent = suggested ? currency.format(suggested.netProfit) : currency.format(0);
   document.querySelector("#smart-break-even").textContent = breakEven ? currency.format(breakEven.salePrice) : "InviÃ¡vel";
-  document.querySelector("#smart-summary-label").textContent = `${marketplace.name} com margem lÃ­quida de ${data.targetNetMarginPercent}%`;
+  document.querySelector("#smart-summary-label").textContent = `${marketplace.name} com margem líquida de ${data.targetNetMarginPercent}% para ${data.unitsPerOffer} un./oferta`;
+  document.querySelector("#smart-suggested-price").closest("article").querySelector("span").textContent = "Preço sugerido por oferta";
 
   const warning = document.querySelector("#smart-warning");
   const commercialOffers = result.production.commercialOffers;
@@ -1638,11 +1707,15 @@ function calculateSmartPricing() {
   warning.innerHTML = "";
   if (data.mode === "unit" && Number(data.physicalUnits) > 1) {
     warning.innerHTML = "Modo unitÃ¡rio usa 1 peÃ§a por cÃ¡lculo. Para dividir custo entre vÃ¡rias peÃ§as, selecione Plate / lote.";
+  } else if (data.mode === "plate" && Number(data.physicalUnits) > 1 && Number(data.unitsPerOffer) === 1) {
+    warning.innerHTML = `Você está calculando preço por peça avulsa. Para vender o kit com ${data.physicalUnits} peças, preencha "Peças vendidas no kit/oferta" com ${data.physicalUnits}.`;
   } else if (hasKit) {
     warning.innerHTML = `Kit detectado: ${data.unitsPerOffer} peÃ§as fÃ­sicas formam 1 oferta vendida. A taxa fixa do marketplace entra por oferta, nÃ£o por peÃ§a fÃ­sica.`;
   } else if (data.mode === "plate" && Number(data.physicalUnits) <= 1) {
     warning.innerHTML = "Plate com apenas 1 peÃ§a nÃ£o gera rateio. Confira se este cÃ¡lculo deveria ser unitÃ¡rio.";
   }
+
+  renderSmartKitVariants(engine, data, marketplace, costPerGram);
 
   document.querySelector("#smart-breakdown").innerHTML = `
     <div><span>Custo real por oferta</span><strong>${currency.format(result.production.finalCostPerOffer)}</strong></div>
@@ -1653,8 +1726,9 @@ function calculateSmartPricing() {
   `;
 
   document.querySelector("#smart-audit").innerHTML = `
-    <div><span>PeÃ§as fÃ­sicas</span><strong>${grams.format(result.production.physicalUnits)}</strong></div>
-    <div><span>Ofertas comerciais</span><strong>${grams.format(commercialOffers)}</strong></div>
+    <div><span>PeÃ§as fÃ­sicas na impressão</span><strong>${grams.format(result.production.physicalUnits)}</strong></div>
+    <div><span>Peças vendidas por oferta</span><strong>${grams.format(result.production.unitsPerOffer)}</strong></div>
+    <div><span>Kits/ofertas por plate</span><strong>${grams.format(commercialOffers)}</strong></div>
     <div><span>Peso por peÃ§a</span><strong>${grams.format(result.production.unitWeightGrams)}g</strong></div>
     <div><span>Tempo mÃ©dio por oferta</span><strong>${result.production.averageTimeHoursPerOffer.toFixed(2)}h</strong></div>
     <div><span>Material total</span><strong>${currency.format(result.production.materialCost)}</strong></div>

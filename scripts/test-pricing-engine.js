@@ -67,6 +67,16 @@ const kitPlate = calculateProductionCost({
 assert.equal(kitPlate.commercialOffers, 10);
 assert.ok(kitPlate.finalCostPerOffer > plate.finalCostPerOffer);
 
+const largerKitThanPlate = calculateProductionCost({
+  ...plateInput,
+  physicalUnits: 6,
+  unitsPerOffer: 12,
+  totalWeightGrams: 48
+});
+
+assert.equal(largerKitThanPlate.commercialOffers, 0.5);
+assert.ok(largerKitThanPlate.finalCostPerOffer > plate.finalCostPerOffer);
+
 const shopeeFee = calculateMarketplaceFee(MARKETPLACE_PRESETS.shopee, 29);
 assert.equal(shopeeFee.ruleLabel, "R$8 a R$79,99");
 assert.equal(shopeeFee.fixedFee, 4);

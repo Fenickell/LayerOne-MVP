@@ -72,7 +72,7 @@
       ? Math.max(1, toNumber(input.physicalUnits || input.plateQuantity, 1))
       : Math.max(1, toNumber(input.physicalUnits || 1, 1));
     const unitsPerOffer = Math.max(1, toNumber(input.unitsPerOffer || 1, 1));
-    const commercialOffers = Math.max(1, physicalUnits / unitsPerOffer);
+    const commercialOffers = Math.max(0.0001, physicalUnits / unitsPerOffer);
     const totalWeightGrams = toNumber(input.totalWeightGrams) > 0
       ? toNumber(input.totalWeightGrams)
       : toNumber(input.unitWeightGrams) * physicalUnits;
