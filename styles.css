@@ -1308,6 +1308,25 @@ main {
   line-height: 1.35;
 }
 
+.kit-variants-empty {
+  background: rgba(94, 125, 255, 0.1);
+  border: 1px solid rgba(94, 125, 255, 0.26);
+  border-radius: 14px;
+  display: grid;
+  gap: 4px;
+  padding: 11px 12px;
+}
+
+.kit-variants-empty strong {
+  font-size: 12px;
+}
+
+.kit-variants-empty span {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .kit-variant-row {
   align-items: center;
   -webkit-backdrop-filter: blur(14px);

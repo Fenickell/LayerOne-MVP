@@ -1422,16 +1422,18 @@ function renderSmartPricingShell() {
       <div class="smart-block-title">
         <span class="smart-index">1</span>
         <div>
-          <h3>Venda e marketplace</h3>
-          <p>Defina o item vendido e a margem líquida desejada.</p>
+          <h3>Produto e impressão base</h3>
+          <p>Informe o que será impresso: tempo total e peso total do arquivo/plate.</p>
         </div>
       </div>
       <div class="form-grid">
         <label>Produto<input name="productName" value="Chaveiro articulado"></label>
-        <label>Marketplace<select name="marketplace" id="smart-marketplace"></select></label>
-        <label>Margem líquida desejada (%)<input name="targetNetMarginPercent" min="0" max="80" step="0.1" type="number" value="35"></label>
-        <label>Peças vendidas no kit/oferta<input name="unitsPerOffer" min="1" step="1" type="number" value="1"><span class="field-hint">Preço final é por oferta vendida, não por peça da plate.</span></label>
-        <label>Variações de kit para comparar<input name="kitVariants" type="text" value="6, 12, 20, 50"><span class="field-hint">Use os pacotes da Shopee separados por vírgula.</span></label>
+        <label>Filamento<select name="filamentId" id="smart-filament-select"></select></label>
+        <label>Peso total usado (g)<input name="totalWeightGrams" min="0" step="0.1" type="number" value="8"><span class="field-hint">Se for plate, use o peso total da plate, não o peso unitário.</span></label>
+      </div>
+      <div class="time-grid">
+        <label>Tempo total - horas<input name="totalTimeWholeHours" min="0" step="1" type="number" value="0"></label>
+        <label>Tempo total - minutos<input name="totalTimeMinutes" min="0" max="59" step="1" type="number" value="40"></label>
       </div>
     </div>
 
@@ -1439,13 +1441,17 @@ function renderSmartPricingShell() {
       <div class="smart-block-title">
         <span class="smart-index">2</span>
         <div>
-          <h3>Impressora e energia</h3>
-          <p>Informe o tempo total da impressão e o consumo elétrico.</p>
+          <h3>Como vai imprimir</h3>
+          <p>Escolha se a produção é de uma peça sozinha ou de várias peças na mesma plate.</p>
         </div>
       </div>
-      <div class="time-grid">
-        <label>Tempo total - horas<input name="totalTimeWholeHours" min="0" step="1" type="number" value="0"></label>
-        <label>Tempo total - minutos<input name="totalTimeMinutes" min="0" max="59" step="1" type="number" value="40"></label>
+      <div class="mode-card-grid compact-modes" role="radiogroup" aria-label="Modo de produção">
+        <label class="mode-card"><input checked name="mode" type="radio" value="unit"><strong>Peça única</strong><span>1 peça por impressão</span></label>
+        <label class="mode-card"><input name="mode" type="radio" value="plate"><strong>Plate / lote</strong><span>várias peças juntas</span></label>
+      </div>
+      <div class="form-grid">
+        <label>Peças que saem na impressão<input name="physicalUnits" min="1" step="1" type="number" value="1"><span class="field-hint">Ex.: se a plate imprime 6 chaveiros, coloque 6.</span></label>
+        <label>Falhas/perdas (%)<input name="failureRatePercent" min="0" step="0.1" type="number" value="8"></label>
       </div>
       <div class="form-grid compact-grid">
         <label>Impressora usada<select name="printerId" id="smart-printer-select"></select></label>
@@ -1458,13 +1464,19 @@ function renderSmartPricingShell() {
       <div class="smart-block-title">
         <span class="smart-index">3</span>
         <div>
-          <h3>Filamento</h3>
-          <p>O custo por grama vem do estoque cadastrado.</p>
+          <h3>Como vai vender</h3>
+          <p>Defina se a oferta é uma unidade ou um kit/pacote do marketplace.</p>
         </div>
       </div>
+      <div class="mode-card-grid compact-modes" role="radiogroup" aria-label="Modo de venda">
+        <label class="mode-card"><input checked name="saleMode" type="radio" value="unit"><strong>Venda unitária</strong><span>cliente compra 1 peça</span></label>
+        <label class="mode-card"><input name="saleMode" type="radio" value="kit"><strong>Kit / pacote</strong><span>cliente compra várias peças</span></label>
+      </div>
       <div class="form-grid">
-        <label>Filamento<select name="filamentId" id="smart-filament-select"></select></label>
-        <label>Peso total usado (g)<input name="totalWeightGrams" min="0" step="0.1" type="number" value="8"></label>
+        <label>Marketplace<select name="marketplace" id="smart-marketplace"></select></label>
+        <label>Margem líquida desejada (%)<input name="targetNetMarginPercent" min="0" max="80" step="0.1" type="number" value="35"></label>
+        <label>Peças vendidas no kit/oferta<input name="unitsPerOffer" min="1" step="1" type="number" value="1"><span class="field-hint">Preço final é por oferta vendida. Kit com 6 peças = 6.</span></label>
+        <label>Variações de kit para comparar<input name="kitVariants" type="text" value="6, 12, 20, 50"><span class="field-hint">Use os pacotes da Shopee separados por vírgula.</span></label>
       </div>
     </div>
 
@@ -1472,17 +1484,11 @@ function renderSmartPricingShell() {
       <div class="smart-block-title">
         <span class="smart-index">4</span>
         <div>
-          <h3>Lote e custos extras</h3>
-          <p>Use plate quando várias peças saem juntas na mesma impressão.</p>
+          <h3>Custos extras da venda</h3>
+          <p>Custos que entram por oferta vendida, como embalagem e acabamento.</p>
         </div>
       </div>
-      <div class="mode-card-grid compact-modes" role="radiogroup" aria-label="Modo de produção">
-        <label class="mode-card"><input checked name="mode" type="radio" value="unit"><strong>Unitário</strong><span>1 peça sozinha</span></label>
-        <label class="mode-card"><input name="mode" type="radio" value="plate"><strong>Plate / lote</strong><span>ratear entre peças</span></label>
-      </div>
       <div class="form-grid">
-        <label>Peças na impressão<input name="physicalUnits" min="1" step="1" type="number" value="1"></label>
-        <label>Falhas/perdas (%)<input name="failureRatePercent" min="0" step="0.1" type="number" value="8"></label>
         <label>Embalagem por oferta (R$)<input name="packagingCostPerOffer" min="0" step="0.01" type="number" value="1.20"></label>
         <label>Mão de obra por oferta (R$)<input name="laborCostPerOffer" min="0" step="0.01" type="number" value="1.00"></label>
         <label>Outros custos por oferta (R$)<input name="extraCostPerOffer" min="0" step="0.01" type="number" value="0"></label>
@@ -1568,9 +1574,34 @@ function readSmartPricingForm() {
 
   const data = Object.fromEntries(new FormData(form).entries());
   for (const key of Object.keys(data)) {
-    if (!["productName", "filamentId", "printerId", "marketplace", "mode", "kitVariants"].includes(key)) {
+    if (!["productName", "filamentId", "printerId", "marketplace", "mode", "saleMode", "kitVariants"].includes(key)) {
       data[key] = Number(data[key] || 0);
     }
+  }
+
+  return data;
+}
+
+function normalizeSmartPricingData(data) {
+  const form = document.querySelector("#smart-pricing-form");
+  if (!form || !data) return data;
+
+  if (data.mode === "unit") {
+    data.physicalUnits = 1;
+    const physicalInput = form.querySelector('[name="physicalUnits"]');
+    if (physicalInput) physicalInput.value = "1";
+  }
+
+  if (Number(data.unitsPerOffer) > 1 && data.saleMode !== "kit") {
+    data.saleMode = "kit";
+    const kitRadio = form.querySelector('[name="saleMode"][value="kit"]');
+    if (kitRadio) kitRadio.checked = true;
+  }
+
+  if (data.saleMode !== "kit") {
+    data.unitsPerOffer = 1;
+    const unitsInput = form.querySelector('[name="unitsPerOffer"]');
+    if (unitsInput) unitsInput.value = "1";
   }
 
   return data;
@@ -1612,6 +1643,16 @@ function parseKitVariants(value, currentUnitsPerOffer, physicalUnits) {
 function renderSmartKitVariants(engine, data, marketplace, costPerGram) {
   const panel = document.querySelector("#smart-kit-variants");
   if (!panel) return;
+
+  if (data.mode !== "plate" || Number(data.physicalUnits) <= 1) {
+    panel.innerHTML = `
+      <div class="kit-variants-empty">
+        <strong>Comparação de kits bloqueada</strong>
+        <span>Para comparar pacotes como 6, 12, 20 ou 50 unidades, selecione Plate / lote e informe quantas peças saem na impressão.</span>
+      </div>
+    `;
+    return;
+  }
 
   const variants = parseKitVariants(data.kitVariants, data.unitsPerOffer, data.physicalUnits);
   if (!variants.length) {
@@ -1661,7 +1702,7 @@ function renderSmartKitVariants(engine, data, marketplace, costPerGram) {
 
 function calculateSmartPricing() {
   const engine = window.LayerOnePricingEngine;
-  const data = readSmartPricingForm();
+  const data = normalizeSmartPricingData(readSmartPricingForm());
   if (!engine || !data) return;
 
   const filament = filaments.find((item) => item.id === data.filamentId) || filaments[0];
@@ -1707,12 +1748,12 @@ function calculateSmartPricing() {
   warning.innerHTML = "";
   if (data.mode === "unit" && Number(data.physicalUnits) > 1) {
     warning.innerHTML = "Modo unitÃ¡rio usa 1 peÃ§a por cÃ¡lculo. Para dividir custo entre vÃ¡rias peÃ§as, selecione Plate / lote.";
+  } else if (data.mode === "plate" && Number(data.physicalUnits) <= 1) {
+    warning.innerHTML = "Plate com apenas 1 peça não gera rateio. Primeiro informe quantas peças saem juntas na impressão.";
   } else if (data.mode === "plate" && Number(data.physicalUnits) > 1 && Number(data.unitsPerOffer) === 1) {
     warning.innerHTML = `Você está calculando preço por peça avulsa. Para vender o kit com ${data.physicalUnits} peças, preencha "Peças vendidas no kit/oferta" com ${data.physicalUnits}.`;
   } else if (hasKit) {
     warning.innerHTML = `Kit detectado: ${data.unitsPerOffer} peÃ§as fÃ­sicas formam 1 oferta vendida. A taxa fixa do marketplace entra por oferta, nÃ£o por peÃ§a fÃ­sica.`;
-  } else if (data.mode === "plate" && Number(data.physicalUnits) <= 1) {
-    warning.innerHTML = "Plate com apenas 1 peÃ§a nÃ£o gera rateio. Confira se este cÃ¡lculo deveria ser unitÃ¡rio.";
   }
 
   renderSmartKitVariants(engine, data, marketplace, costPerGram);
