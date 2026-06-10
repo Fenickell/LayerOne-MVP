@@ -1758,11 +1758,16 @@ function calculateSmartPricing() {
 
   renderSmartKitVariants(engine, data, marketplace, costPerGram);
 
+  const marketplaceFee = suggested?.marketplaceFee;
+  const appliedRuleLabel = marketplaceFee?.ruleLabel ? `Venda de ${marketplaceFee.ruleLabel}` : "Sem regra";
+
   document.querySelector("#smart-breakdown").innerHTML = `
     <div><span>Custo real por oferta</span><strong>${currency.format(result.production.finalCostPerOffer)}</strong></div>
     <div><span>Custo de produÃ§Ã£o por oferta</span><strong>${currency.format(result.production.productionCostPerOffer)}</strong></div>
-    <div><span>Taxas do marketplace</span><strong>${suggested ? currency.format(suggested.marketplaceFee.totalFee) : currency.format(0)}</strong></div>
-    <div><span>Regra aplicada</span><strong>${suggested?.marketplaceFee.ruleLabel || "Sem regra"}</strong></div>
+    <div><span>Comissão ${marketplaceFee ? `${decimal.format(marketplaceFee.appliedPercent)}%` : ""}</span><strong>${marketplaceFee ? currency.format(marketplaceFee.percentageFee) : currency.format(0)}</strong></div>
+    <div><span>Taxa fixa por oferta</span><strong>${marketplaceFee ? currency.format(marketplaceFee.fixedFee) : currency.format(0)}</strong></div>
+    <div><span>Taxas do marketplace</span><strong>${marketplaceFee ? currency.format(marketplaceFee.totalFee) : currency.format(0)}</strong></div>
+    <div><span>Faixa aplicada</span><strong>${appliedRuleLabel}</strong></div>
     <div><span>Margem lÃ­quida real</span><strong>${suggested ? `${suggested.netMarginPercent.toFixed(2)}%` : "0%"}</strong></div>
   `;
 
